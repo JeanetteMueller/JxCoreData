@@ -1,4 +1,6 @@
 JxCoreDataStore
 ===============
 
-CoreData Store to provide a way to use SQLite DB on an easy way. Supports sackgroundservice and replacing SQLite with new file
+JxCoreDataStore provides a easy way to use CoreData with SQLiteDB. 
+
+Supports backgroundservice and replacing SQLite file with a new file on the fly.
