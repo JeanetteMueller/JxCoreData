@@ -16,11 +16,16 @@
 - (UITableView *)tableView{
     return (UITableView *)self.view;
 }
+- (void)viewDidLoad{
+    _page = 1;
+    
+}
 - (void)viewWillAppear:(BOOL)animated{
     [super viewWillAppear:animated];
     LLog();
     [self.tableView setScrollsToTop:YES];
-
+    
+    
     
 }
 - (void)viewWillDisappear:(BOOL)animated{
@@ -34,12 +39,12 @@
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
 {
     LLog();
+    
     return [[self.fetchedResultsController sections] count];
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
-    LLog();
     id <NSFetchedResultsSectionInfo> sectionInfo = [self.fetchedResultsController sections][section];
     NSInteger count = [sectionInfo numberOfObjects];
     
@@ -54,85 +59,92 @@
     
     [self configureCell:cell atIndexPath:indexPath];
     
-    
-    
-    
-    
     return cell;
-}
-- (void)pagingCellFor:(UITableView *)tableView atIndexPath:(NSIndexPath *)indexPath{
-    NSLog(@"1");
-    if (indexPath.section == [tableView numberOfSections]-1){
-        NSLog(@"2");
-        if (indexPath.row == [tableView numberOfRowsInSection:indexPath.section]-1) {
-            NSLog(@"3");
-            int oldLimit = self.fetchedResultsController.fetchRequest.fetchLimit;
-            //int sectionsCount = [self.tableView numberOfSections];
-            if (oldLimit <= kFetchLimitPagingStartSize){
-                self.fetchLimit = [NSNumber numberWithInt:(1000-oldLimit)];
-                
-                [self.fetchedResultsController.fetchRequest setFetchLimit:(1000-oldLimit)];
-                
-                
-                [self refetchData];
-                [self.tableView reloadData];
-            }
-            
-
-//            self.tableView.contentInset = UIEdgeInsetsMake(self.tableView.contentInset.top,
-//                                                           self.tableView.contentInset.left,
-//                                                           self.tableView.contentInset.bottom-100,
-//                                                           self.tableView.contentInset.right);
-            
-            /*
-            NSArray *objects = self.fetchedResultsController.fetchedObjects;
-            
-            NSMutableArray *insertPathes = [NSMutableArray array];
-            NSMutableIndexSet *insertSections = [NSMutableIndexSet indexSet];
-            
-            for (int i = oldLimit; i < oldLimit+10; i++) {
-                
-                if ([objects count] > i){
-                    id object = [objects objectAtIndex:i];
-                    if (object != nil && ![object isKindOfClass:[NSNull class]]) {
-                        NSIndexPath *objectIndexPath = [self.fetchedResultsController indexPathForObject:object];
-                        
-                        if (objectIndexPath.section > sectionsCount-1) {
-                            [insertSections addIndex:objectIndexPath.section];
-                        }
-                        [insertPathes addObject:objectIndexPath];
-                        
-                        
-                    }
-                }
-                
-                
-            }
-            
-            [self.tableView beginUpdates];
-            
-            if ([insertSections count] > 0) {
-                [self.tableView insertSections:insertSections withRowAnimation:UITableViewRowAnimationNone];
-            }
-            
-            if ([insertPathes count] > 0) {
-                [self.tableView insertRowsAtIndexPaths:insertPathes withRowAnimation:UITableViewRowAnimationNone];
-            }
-            
-            
-            
-            [self.tableView endUpdates];
-            
-            */
-            
-        }
-    }
 }
 - (void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath{
     LLog();
     [self startCell:cell atIndexPath:indexPath];
     
-    [self pagingCellFor:tableView atIndexPath:indexPath];
+    //[self pagingCellFor:tableView atIndexPath:indexPath];
+    
+}
+- (void)pagingCellFor:(UITableView *)tableView atIndexPath:(NSIndexPath *)indexPath{
+    NSLog(@"1");
+    
+    if (!_lastPageReached) {
+        
+        int oldLimit = self.fetchedResultsController.fetchRequest.fetchLimit;
+
+        int loadedItemsCount = [self.fetchedResultsController.fetchedObjects count];
+        int sectionCount = [tableView numberOfSections];
+    
+        int itemsInLastSection = 0;
+        if (sectionCount > 0) {
+            itemsInLastSection = [tableView numberOfRowsInSection:sectionCount-1];
+        }
+        
+        
+        [self.fetchedResultsController.fetchRequest setFetchLimit:oldLimit+kFetchLimitPagingStartSize];
+        [self refetchData];
+        
+        int newLoadedItemsCount = [self.fetchedResultsController.fetchedObjects count];
+        
+        if (newLoadedItemsCount > loadedItemsCount) {
+            [self.tableView beginUpdates];
+            
+            int newItemsInLastSection = [self tableView:tableView numberOfRowsInSection:sectionCount-1];
+            int newSectionCount = [self numberOfSectionsInTableView:tableView];
+            
+            LLog();
+            
+            if (itemsInLastSection < newItemsInLastSection) {
+                
+                int i = itemsInLastSection;
+                NSMutableArray *insertPathes = [NSMutableArray array];
+                
+                while (i < newItemsInLastSection) {
+                    [insertPathes addObject:[NSIndexPath indexPathForRow:i inSection:sectionCount-1]];
+                    i++;
+                }
+                DLog(@"insertPathes %@", insertPathes);
+                [self.tableView insertRowsAtIndexPaths:insertPathes withRowAnimation:UITableViewRowAnimationNone];
+            }
+            
+            if (sectionCount < newSectionCount) {
+                
+                int s = sectionCount;
+                NSMutableIndexSet *insertSections = [NSMutableIndexSet indexSet];
+                while (s < newSectionCount) {
+                    [insertSections addIndex:s];
+                    s++;
+                }
+                DLog(@"insertSections %@", insertSections);
+                [self.tableView insertSections:insertSections withRowAnimation:UITableViewRowAnimationNone];
+            }
+            
+            LLog();
+            
+            [self.tableView endUpdates];
+            
+        }else{
+            _lastPageReached = YES;
+        }
+
+    }
+    
+    
+}
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView{
+    LLog();
+    
+    NSLog(@"offset %f + height %f = %f", scrollView.contentOffset.y, scrollView.frame.size.height, scrollView.contentOffset.y+scrollView.frame.size.height);
+    
+    NSLog(@"size %f", scrollView.contentSize.height);
+    
+    
+    if (scrollView.contentOffset.y+scrollView.frame.size.height > scrollView.contentSize.height-50 ) {
+        [self pagingCellFor:(UITableView *)scrollView atIndexPath:nil];
+    }
     
 }
 
@@ -241,7 +253,6 @@
 #pragma mark - Fetched results controller
 - (void)controllerWillChangeContent:(NSFetchedResultsController *)controller
 {
-    
     if ((self.navigationController == nil || [[self.navigationController visibleViewController] isEqual:self]) && self.dynamicUpdate) {
         LLog();
         [self.tableView beginUpdates];
@@ -259,12 +270,6 @@
                 
             case NSFetchedResultsChangeDelete:
                 [self.tableView deleteSections:[NSIndexSet indexSetWithIndex:sectionIndex] withRowAnimation:UITableViewRowAnimationRight];
-                
-                
-                
-
-                
-                
                 break;
         }
     }
@@ -310,20 +315,9 @@
             [self.tableView reloadData];
         }
         
-    }else{
-        //[self.tableView reloadData];
     }
 }
-/*
- // Implementing the above methods to update the table view in response to individual changes may have performance implications if a large number of changes are made simultaneously. If this proves to be an issue, you can instead just implement controllerDidChangeContent: which notifies the delegate that all section and object changes have been processed.
- 
- - (void)controllerDidChangeContent:(NSFetchedResultsController *)controller
- {
- // In the simplest, most efficient, case, reload the table view.
- [self.tableView reloadData];
- }
- 
-*/
+
 
 
 @end

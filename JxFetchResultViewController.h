@@ -8,7 +8,7 @@
 
 #import <CoreData/CoreData.h>
 
-#define kFetchLimitPagingStartSize 30
+#define kFetchLimitPagingStartSize 20
 
 @interface JxFetchResultViewController : UIViewController <NSFetchedResultsControllerDelegate>
 

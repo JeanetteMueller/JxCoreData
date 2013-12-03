@@ -15,7 +15,7 @@
 
 - (void)viewWillAppear:(BOOL)animated{
     [super viewWillAppear:animated];
-    //LLog();
+    LLog();
     
     
 
@@ -23,7 +23,7 @@
 }
 - (void)viewDidAppear:(BOOL)animated{
     [super viewDidAppear:animated];
-    //LLog();
+    LLog();
 }
 - (void)viewWillDisappear:(BOOL)animated{
     //LLog();
@@ -37,14 +37,12 @@
     [self.fetchedResultsController performFetch:nil];
 }
 - (NSFetchedResultsController *)fetchedResultsController{
-    
+    LLog();
     if (_fetchedResultsController != nil) {
         return _fetchedResultsController;
     }
-    LLog();
     NSFetchRequest *fetchRequest = [NSFetchRequest fetchRequestWithEntityName:self.entityName];
     fetchRequest.resultType = NSManagedObjectResultType;
-    
     if (self.predicate != nil) {
         [fetchRequest setPredicate:self.predicate];
     }
@@ -52,19 +50,27 @@
     if (self.sortDescriptors != nil) {
         fetchRequest.sortDescriptors = self.sortDescriptors;
     }
-    
     fetchRequest.returnsObjectsAsFaults = NO;
     [fetchRequest setFetchLimit:[self.fetchLimit intValue]];
     
+    LLog();
     // Edit the section name key path and cache name if appropriate.
     // nil for section name key path means "no sections".
+    
+    NSLog(@"1 %@", fetchRequest);
+    NSLog(@"2 %@", self.managedObjectContext);
+    NSLog(@"3 %@", self.sectionKeyPath);
+    
+    
     NSFetchedResultsController *aFetchedResultsController = [[NSFetchedResultsController alloc] initWithFetchRequest:fetchRequest
                                                                                                 managedObjectContext:self.managedObjectContext
                                                                                                   sectionNameKeyPath:self.sectionKeyPath
                                                                                                            cacheName:nil];
+    LLog();
     aFetchedResultsController.delegate = self;
     self.fetchedResultsController = aFetchedResultsController;
     
+    LLog();
     
 //    NSError *error = nil;
 //	if (![self.fetchedResultsController performFetch:&error]) {
