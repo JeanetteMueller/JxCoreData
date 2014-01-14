@@ -13,6 +13,8 @@
 #import "JxCoreDataPredicateConfig.h"
 
 
+#define kJxCoreDataPredicateDidChange @"jxCoreDataPredicateDidChange" 
+
 @interface JxCoreDataPredicateBuilder : NSObject
 
 #pragma mark init

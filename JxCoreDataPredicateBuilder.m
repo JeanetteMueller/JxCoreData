@@ -80,7 +80,7 @@
 }
 #pragma mark Config
 - (JxCoreDataPredicateConfig *)getConfigForKey:(NSString *)propKey{
-    LLog();
+    DLog(@"propKey %@", propKey);
     if (!_config) {
         [self loadPropertyConfig];
     }
@@ -133,6 +133,9 @@
     
     DLog(@"saved filter %@", [[NSUserDefaults standardUserDefaults] objectForKey:@"filter"]);
     DLog(@"saved values %@", [NSKeyedUnarchiver unarchiveObjectWithData:[[NSUserDefaults standardUserDefaults] objectForKey:@"filtervalues"]]);
+    
+    
+    [[NSNotificationCenter defaultCenter] postNotificationName:kJxCoreDataPredicateDidChange object:nil];
 }
 #pragma mark Create Filter
 - (void)resetFilter{
@@ -204,25 +207,28 @@
             if ([filterv isKindOfClass:[JxCoreDataPredicateFilterContains class]]) {
                 JxCoreDataPredicateFilterContains *filterObject = (JxCoreDataPredicateFilterContains *)filterv;
                 
-                if ([filterObject.exclude count] > 0) {
-                    predicateString = [predicateString stringByAppendingFormat:@" AND ( "];
-                    for (NSString *v in filterObject.exclude) {
-                        predicateString = [predicateString stringByAppendingFormat:@" NOT ( %@ LIKE '%@' ) AND ", filter, v];
+                if (filterObject != nil && [filterObject isKindOfClass:[JxCoreDataPredicateFilterContains class]]) {
+                    if ([[filterObject exclude] count] > 0) {
+                        predicateString = [predicateString stringByAppendingFormat:@" AND ( "];
+                        for (NSString *v in filterObject.exclude) {
+                            predicateString = [predicateString stringByAppendingFormat:@" NOT ( %@ LIKE '%@' ) AND ", filter, v];
+                        }
+                        
+                        predicateString = [predicateString substringToIndex:predicateString.length-4];
+                        predicateString = [predicateString stringByAppendingFormat:@" ) "];
+                        
+                    }else if ([[filterObject contains] count] > 0) {
+                        predicateString = [predicateString stringByAppendingFormat:@" AND ( "];
+                        for (NSString *v in filterObject.contains) {
+                            predicateString = [predicateString stringByAppendingFormat:@"%@ LIKE '%@' OR ", filter, v];
+                        }
+                        
+                        predicateString = [predicateString substringToIndex:predicateString.length-3];
+                        predicateString = [predicateString stringByAppendingFormat:@" ) "];
+                        
                     }
-                    
-                    predicateString = [predicateString substringToIndex:predicateString.length-4];
-                    predicateString = [predicateString stringByAppendingFormat:@" ) "];
-                    
-                }else if ([filterObject.contains count] > 0) {
-                    predicateString = [predicateString stringByAppendingFormat:@" AND ( "];
-                    for (NSString *v in filterObject.contains) {
-                        predicateString = [predicateString stringByAppendingFormat:@"%@ LIKE '%@' OR ", filter, v];
-                    }
-                    
-                    predicateString = [predicateString substringToIndex:predicateString.length-3];
-                    predicateString = [predicateString stringByAppendingFormat:@" ) "];
-                    
                 }
+                
             }else if ([filterv isKindOfClass:[JxCoreDataPredicateFilterRange class]]) {
                 
                 JxCoreDataPredicateFilterRange *filterObject = (JxCoreDataPredicateFilterRange *)filterv;

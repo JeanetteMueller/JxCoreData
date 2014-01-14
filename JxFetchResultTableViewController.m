@@ -69,33 +69,40 @@
     
 }
 - (void)pagingCellFor:(UITableView *)tableView atIndexPath:(NSIndexPath *)indexPath{
-    NSLog(@"1");
+    LLog();
     
     if (!_lastPageReached) {
-        
+        DLog(@"DO IT");
         int oldLimit = self.fetchedResultsController.fetchRequest.fetchLimit;
 
         int loadedItemsCount = [self.fetchedResultsController.fetchedObjects count];
-        int sectionCount = [tableView numberOfSections];
-    
-        int itemsInLastSection = 0;
-        if (sectionCount > 0) {
-            itemsInLastSection = [tableView numberOfRowsInSection:sectionCount-1];
-        }
         
+        if (loadedItemsCount == oldLimit) {
+            
+
         
-        [self.fetchedResultsController.fetchRequest setFetchLimit:oldLimit+kFetchLimitPagingStartSize];
-        [self refetchData];
+            int sectionCount = [tableView numberOfSections];
         
-        int newLoadedItemsCount = [self.fetchedResultsController.fetchedObjects count];
-        
-        if (newLoadedItemsCount > loadedItemsCount) {
+            int itemsInLastSection = 0;
+            if (sectionCount > 0) {
+                itemsInLastSection = [tableView numberOfRowsInSection:sectionCount-1];
+            }
+            
+            
+            [self.fetchedResultsController.fetchRequest setFetchLimit:oldLimit+[self.fetchLimit intValue]];
+            [self refetchData];
+            
+            //int newLoadedItemsCount = [self.fetchedResultsController.fetchedObjects count];
+            
+            //if (newLoadedItemsCount > loadedItemsCount) {
+            
+            DLog(@"step 1");
             [self.tableView beginUpdates];
             
             int newItemsInLastSection = [self tableView:tableView numberOfRowsInSection:sectionCount-1];
             int newSectionCount = [self numberOfSectionsInTableView:tableView];
             
-            LLog();
+            
             
             if (itemsInLastSection < newItemsInLastSection) {
                 
@@ -127,17 +134,23 @@
             [self.tableView endUpdates];
             
         }else{
+            DLog(@"step 2");
             _lastPageReached = YES;
+            
+            [self reachedLastElement];
         }
 
     }
     
     
 }
+- (void)reachedLastElement{
+    LLog();
+}
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView{
     LLog();
     
-    NSLog(@"offset %f + height %f = %f", scrollView.contentOffset.y, scrollView.frame.size.height, scrollView.contentOffset.y+scrollView.frame.size.height);
+    //NSLog(@"offset %f + height %f = %f", scrollView.contentOffset.y, scrollView.frame.size.height, scrollView.contentOffset.y+scrollView.frame.size.height);
     
     NSLog(@"size %f", scrollView.contentSize.height);
     
@@ -246,7 +259,7 @@
 }
 - (void)unloadCell:(UITableViewCell *)cell atIndexPath:(NSIndexPath *)indexPath{
     LLog();
-
+    
     [[NSNotificationCenter defaultCenter] removeObserver:cell];
 }
 

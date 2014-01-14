@@ -5,6 +5,7 @@
 //
 
 #import "JxCoreDataStore.h"
+#import "Logging.h"
 
 @interface JxCoreDataStore ()
 
@@ -127,9 +128,43 @@
     if (_persistentStoreCoordinator != nil) {
         return _persistentStoreCoordinator;
     }
+    DLog(@"Db Name \"%@\"", _name);
+    NSError *error;
     
     NSURL *storeURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:[self getDBFileName]];
-    NSError *error;
+    
+    if (![[[NSFileManager alloc] init] fileExistsAtPath:storeURL.path]) {
+        
+        NSString *sqliteFilePath = [[NSBundle mainBundle] pathForResource:_name ofType:@"sqlite"];
+        
+        NSLog(@"sqliteFilePath %@", sqliteFilePath);
+        if (sqliteFilePath) {
+            NSURL *documentPath = [NSURL fileURLWithPath:sqliteFilePath];
+            NSLog(@"documentPath %@", documentPath);
+            
+            if ([[[NSFileManager alloc] init] fileExistsAtPath:documentPath.path]){
+                
+                if (![[NSFileManager defaultManager] copyItemAtURL:documentPath toURL:storeURL error:&error]) {
+                    NSLog(@"Oops, could copy preloaded data");
+                    NSLog(@"ERROR %@, %@", error, [error userInfo]);
+                    
+                }else{
+                    NSLog(@"kopiere vorhandene sqlite DB an richtigen Ort");
+                }
+                
+            }else{
+                NSLog(@"Projekteidene sqlite DB existiert nicht");
+            }
+        }else{
+            NSLog(@"sqliteFilePath nicht definiert");
+        }
+    }else{
+        NSLog(@"DB existiert bereits an richtigem Ort");
+    }
+    
+    
+    
+    
     _persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
 
     if (![_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeURL options:[self getSQLiteOptions] error:&error]) {

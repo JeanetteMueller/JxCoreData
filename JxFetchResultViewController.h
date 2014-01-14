@@ -8,8 +8,6 @@
 
 #import <CoreData/CoreData.h>
 
-#define kFetchLimitPagingStartSize 20
-
 @interface JxFetchResultViewController : UIViewController <NSFetchedResultsControllerDelegate>
 
 @property (strong, nonatomic) NSManagedObjectContext *managedObjectContext;

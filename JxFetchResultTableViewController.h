@@ -21,4 +21,6 @@
 - (void)startCell:(UITableViewCell *)cell atIndexPath:(NSIndexPath *)indexPath;
 - (void)unloadCell:(UITableViewCell *)cell atIndexPath:(NSIndexPath *)indexPath;
 
+- (void)reachedLastElement;
+
 @end
