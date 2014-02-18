@@ -45,7 +45,19 @@
         }
     }
 }
-
+- (void)flushStore{
+    NSPersistentStore *store = self.persistentStoreCoordinator.persistentStores[0];
+    NSError *error;
+    NSURL *storeURL = store.URL;
+    NSPersistentStoreCoordinator *storeCoordinator = self.persistentStoreCoordinator;
+    [storeCoordinator removePersistentStore:store error:&error];
+    [[NSFileManager defaultManager] removeItemAtPath:storeURL.path error:&error];
+    
+    _persistentStoreCoordinator = nil;
+    _mainManagedObjectContext = nil;
+    _managedObjectModel = nil;
+    
+}
 - (BOOL)replaceCurrentSQLiteDBWithNewDB:(NSURL *)pathToNewDBFile{
     NSArray *stores = [_persistentStoreCoordinator persistentStores];
     
@@ -82,18 +94,24 @@
                                                        queue:nil
                                                   usingBlock:^(NSNotification* note) {
                                                       
-                                                      NSManagedObjectContext *moc = self.mainManagedObjectContext;
-                                                      NSManagedObjectContext *backgroundMoc = note.object;
-                                                      
-                                                      if (backgroundMoc != nil &&
-                                                          backgroundMoc != moc &&
-                                                          backgroundMoc.persistentStoreCoordinator == moc.persistentStoreCoordinator) {
+                                                      if (_mainManagedObjectContext) {
+                                                          NSManagedObjectContext *moc = self.mainManagedObjectContext;
+                                                          NSManagedObjectContext *backgroundMoc = note.object;
                                                           
-                                                          [moc performBlock:^(){
-                                                              [moc mergeChangesFromContextDidSaveNotification:note];
-                                                              [[NSNotificationCenter defaultCenter] postNotificationName:kStoreDidChangeNotification object:nil];
-                                                          }];
+                                                          if (backgroundMoc != nil &&
+                                                              backgroundMoc != moc &&
+                                                              moc.persistentStoreCoordinator != nil &&
+                                                              backgroundMoc.persistentStoreCoordinator == moc.persistentStoreCoordinator &&
+                                                              moc.persistentStoreCoordinator == [self persistentStoreCoordinator]
+                                                              ) {
+                                                              
+                                                              [moc performBlock:^(){
+                                                                  [moc mergeChangesFromContextDidSaveNotification:note];
+                                                                  [[NSNotificationCenter defaultCenter] postNotificationName:kStoreDidChangeNotification object:nil];
+                                                              }];
+                                                          }
                                                       }
+                                                      
                                                   }];
     
 }
@@ -101,9 +119,11 @@
     if (_mainManagedObjectContext != nil) {
         return _mainManagedObjectContext;
     }
-
+    DLog(@"create new mainManagedObjectContext");
     _mainManagedObjectContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
     _mainManagedObjectContext.persistentStoreCoordinator = [self persistentStoreCoordinator];
+    
+    DLog(@"return new mainManagedObjectContext: %@", _mainManagedObjectContext);
     return _mainManagedObjectContext;
 }
 - (NSManagedObjectModel *)managedObjectModel{
@@ -116,9 +136,10 @@
     return _managedObjectModel;
 }
 - (NSDictionary *)getSQLiteOptions{
-    return [NSDictionary dictionaryWithObjectsAndKeys:
-            [NSNumber numberWithBool:YES], NSMigratePersistentStoresAutomaticallyOption,
-            [NSNumber numberWithBool:YES], NSInferMappingModelAutomaticallyOption, nil];
+    return @{
+             NSMigratePersistentStoresAutomaticallyOption: [NSNumber numberWithBool:YES],
+             NSInferMappingModelAutomaticallyOption: [NSNumber numberWithBool:YES]
+             };
     
 }
 - (NSString *)getDBFileName{
@@ -128,21 +149,35 @@
     if (_persistentStoreCoordinator != nil) {
         return _persistentStoreCoordinator;
     }
+    
+    if (![NSThread currentThread].isMainThread) {
+        dispatch_sync(dispatch_get_main_queue(), ^{
+            (void)[self persistentStoreCoordinator];
+        });
+        return _persistentStoreCoordinator;
+    }
+    
+    
+    self.persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
+    
+    
     DLog(@"Db Name \"%@\"", _name);
     NSError *error;
     
     NSURL *storeURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:[self getDBFileName]];
     
-    if (![[[NSFileManager alloc] init] fileExistsAtPath:storeURL.path]) {
+    if (![[NSFileManager defaultManager] fileExistsAtPath:storeURL.path]) {
         
         NSString *sqliteFilePath = [[NSBundle mainBundle] pathForResource:_name ofType:@"sqlite"];
         
         NSLog(@"sqliteFilePath %@", sqliteFilePath);
         if (sqliteFilePath) {
-            NSURL *documentPath = [NSURL fileURLWithPath:sqliteFilePath];
-            NSLog(@"documentPath %@", documentPath);
             
-            if ([[[NSFileManager alloc] init] fileExistsAtPath:documentPath.path]){
+            if ([[NSFileManager defaultManager] fileExistsAtPath:sqliteFilePath]){
+                
+                NSURL *documentPath = [NSURL fileURLWithPath:sqliteFilePath];
+                NSLog(@"documentPath %@", documentPath);
+
                 
                 if (![[NSFileManager defaultManager] copyItemAtURL:documentPath toURL:storeURL error:&error]) {
                     NSLog(@"Oops, could copy preloaded data");
@@ -151,7 +186,6 @@
                 }else{
                     NSLog(@"kopiere vorhandene sqlite DB an richtigen Ort");
                 }
-                
             }else{
                 NSLog(@"Projekteidene sqlite DB existiert nicht");
             }
@@ -162,14 +196,20 @@
         NSLog(@"DB existiert bereits an richtigem Ort");
     }
     
-    
-    
-    
-    _persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
 
-    if (![_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeURL options:[self getSQLiteOptions] error:&error]) {
+    if (![_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType
+                                                   configuration:nil
+                                                             URL:storeURL
+                                                         options:[self getSQLiteOptions]
+                                                           error:&error]) {
+        
         NSLog(@"ERROR %@, %@", error, [error userInfo]);
-        abort();
+        //abort();
+        
+        [[NSFileManager defaultManager] removeItemAtPath:storeURL.path error:&error];
+        
+        
+        return [self persistentStoreCoordinator];
     }
     
     return _persistentStoreCoordinator;

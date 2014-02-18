@@ -80,7 +80,7 @@
 }
 #pragma mark Config
 - (JxCoreDataPredicateConfig *)getConfigForKey:(NSString *)propKey{
-    DLog(@"propKey %@", propKey);
+    //DLog(@"propKey %@", propKey);
     if (!_config) {
         [self loadPropertyConfig];
     }
@@ -197,7 +197,6 @@
     for (NSString *filter in [_dataFiltervalues allKeys]) {
         NSLog(@"Filter: %@", filter);
         
-        
         id filterv = [_dataFiltervalues objectForKey:filter];
         
         NSLog(@"filterv %@", filterv);
@@ -235,21 +234,72 @@
                 NSInteger from = [filterObject.from integerValue];
                 NSInteger to = [filterObject.to integerValue];
                 
-                predicateString = [predicateString stringByAppendingFormat:@" AND ( %@ <= %d AND %@ >= %d ) ", filter, to, filter, from];
-                
+                NSArray *filterParts = [filter componentsSeparatedByString:@"."];
+                if ([filterParts count] > 1) {
+                    NSString *filterSubKeyPath = @"";
+                    NSString *filterMainKey = @"";
+                    int count = 0;
+                    for (NSString *part in filterParts) {
+                        if (count == 0) {
+                            filterMainKey = part;
+                        }else{
+                            filterSubKeyPath = [filterSubKeyPath stringByAppendingFormat:@".%@", part];
+                        }
+                        count++;
+                    }
+                    // AND $f%@ >= %d
+                    //, filterSubKeyPath, from
+                    predicateString = [predicateString stringByAppendingFormat:@" AND ( SUBQUERY(%@, $p, $p%@ >= %d AND $p%@ <= %d).@count > 0 ) ", filterMainKey, filterSubKeyPath, from, filterSubKeyPath, to];
+                }else{
+                    predicateString = [predicateString stringByAppendingFormat:@" AND ( %@ BETWEEN {%d, %d} ) ", filter, from, to ];
+                }
+
             }else if ([filterv isKindOfClass:[JxCoreDataPredicateFilterSmaller class]]){
                 
                 JxCoreDataPredicateFilterSmaller *filterObject = (JxCoreDataPredicateFilterSmaller *)filterv;
                 NSInteger smaller = [filterObject.smaller integerValue];
                 
-                predicateString = [predicateString stringByAppendingFormat:@" AND ( %@ <= %d ) ", filter, smaller];
                 
+                
+                NSArray *filterParts = [filter componentsSeparatedByString:@"."];
+                if ([filterParts count] > 1) {
+                    NSString *filterSubKeyPath = @"";
+                    NSString *filterMainKey = @"";
+                    int count = 0;
+                    for (NSString *part in filterParts) {
+                        if (count == 0) {
+                            filterMainKey = part;
+                        }else{
+                            filterSubKeyPath = [filterSubKeyPath stringByAppendingFormat:@".%@", part];
+                        }
+                        count++;
+                    }
+                    predicateString = [predicateString stringByAppendingFormat:@" AND ( SUBQUERY(%@, $p, $p%@ <= %d).@count > 0 ) ", filterMainKey, filterSubKeyPath, smaller];
+                }else{
+                    predicateString = [predicateString stringByAppendingFormat:@" AND ( %@ <= %d ) ", filter, smaller];
+                }
             }else if ([filterv isKindOfClass:[JxCoreDataPredicateFilterLarger class]]){
                 
                 JxCoreDataPredicateFilterLarger *filterObject = (JxCoreDataPredicateFilterLarger *)filterv;
                 NSInteger larger = [filterObject.larger integerValue];
                 
-                predicateString = [predicateString stringByAppendingFormat:@" AND ( %@ >= %d ) ", filter, larger];
+                NSArray *filterParts = [filter componentsSeparatedByString:@"."];
+                if ([filterParts count] > 1) {
+                    NSString *filterSubKeyPath = @"";
+                    NSString *filterMainKey = @"";
+                    int count = 0;
+                    for (NSString *part in filterParts) {
+                        if (count == 0) {
+                            filterMainKey = part;
+                        }else{
+                            filterSubKeyPath = [filterSubKeyPath stringByAppendingFormat:@".%@", part];
+                        }
+                        count++;
+                    }
+                    predicateString = [predicateString stringByAppendingFormat:@" AND ( SUBQUERY(%@, $p, $p%@ >= %d).@count > 0 ) ", filterMainKey, filterSubKeyPath, larger];
+                }else{
+                    predicateString = [predicateString stringByAppendingFormat:@" AND ( %@ >= %d ) ", filter, larger];
+                }
             }
         }
     }

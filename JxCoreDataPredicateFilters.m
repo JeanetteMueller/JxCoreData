@@ -186,10 +186,20 @@
 }
 
 - (void)setContains:(NSMutableArray *)contains{
+    
+    if (![contains isKindOfClass:[NSMutableArray class]] && [contains isKindOfClass:[NSArray class]]) {
+        contains = [NSMutableArray arrayWithArray:contains];
+    }
+    
     _contains = contains;
     _exclude = [NSMutableArray array];
 }
 - (void)setExclude:(NSMutableArray *)exclude{
+    
+    if (![exclude isKindOfClass:[NSMutableArray class]] && [exclude isKindOfClass:[NSArray class]]) {
+        exclude = [NSMutableArray arrayWithArray:exclude];
+    }
+    
     _contains = [NSMutableArray array];
     _exclude = exclude;
 }

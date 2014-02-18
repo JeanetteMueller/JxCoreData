@@ -18,6 +18,7 @@
 - (NSManagedObjectContext*)newPrivateContext;
 
 - (void)saveContext;
+- (void)flushStore;
 
 - (BOOL)replaceCurrentSQLiteDBWithNewDB:(NSURL *)pathToNewDBFile;
 
