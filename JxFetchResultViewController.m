@@ -44,37 +44,52 @@
 
 - (void)refetchData {
     LLog();
-    [self.fetchedResultsController performFetch:nil];
+    NSError *error;
+    
+    @try {        
+        if (![self.fetchedResultsController performFetch:&error]) {
+            NSLog(@"Error %@: %@", error, error.description);
+        };
+
+    }
+    @catch (NSException *exception) {
+        NSLog(@"Exception %@: %@", exception.name, exception.reason);
+    }
+  
 }
 - (NSFetchedResultsController *)fetchedResultsController{
     
     if (_fetchedResultsController != nil) {
         return _fetchedResultsController;
     }
-    LLog();
+    DLog(@"self.entityName: %@", self.entityName);
     
     NSFetchRequest *fetchRequest = [NSFetchRequest fetchRequestWithEntityName:self.entityName];
     fetchRequest.resultType = NSManagedObjectResultType;
     if (self.predicate != nil) {
         [fetchRequest setPredicate:self.predicate];
     }
-    
     if (self.sortDescriptors != nil) {
         fetchRequest.sortDescriptors = self.sortDescriptors;
     }
+
     fetchRequest.returnsObjectsAsFaults = NO;
     [fetchRequest setFetchLimit:[self.fetchLimit intValue]];
-
     
+    NSLog(@"fetchRequest %@", fetchRequest);
+    NSLog(@"managedObjectContext %@", self.managedObjectContext);
+    NSLog(@"sectionKeyPath %@", self.sectionKeyPath);
+    LLog();
     NSFetchedResultsController *aFetchedResultsController = [[NSFetchedResultsController alloc] initWithFetchRequest:fetchRequest
                                                                                                 managedObjectContext:self.managedObjectContext
                                                                                                   sectionNameKeyPath:self.sectionKeyPath
                                                                                                            cacheName:nil];
-
+    
+    LLog();
     aFetchedResultsController.delegate = self;
     self.fetchedResultsController = aFetchedResultsController;
     
-
+    LLog();
     
 //    NSError *error = nil;
 //	if (![self.fetchedResultsController performFetch:&error]) {

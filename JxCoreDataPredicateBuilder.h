@@ -9,7 +9,6 @@
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 #import "JxCoreDataPredicateFilters.h"
-#import "AKFilterViewController.h"
 #import "JxCoreDataPredicateConfig.h"
 
 
@@ -19,7 +18,8 @@
 
 #pragma mark init
 
-+ (JxCoreDataPredicateBuilder *)sharedManager;
++ (JxCoreDataPredicateBuilder *)sharedManager __deprecated_msg("Use Singleton with Namespace");
++ (JxCoreDataPredicateBuilder *)sharedManagerInNamespace:(NSString *)newNamespace;
 
 #pragma mark Config
 - (JxCoreDataPredicateConfig *)getConfigForKey:(NSString *)propKey;
@@ -36,7 +36,7 @@
 
 #pragma mark Get Filter
 - (NSPredicate *)getPredicate;
-
+- (NSPredicate *)getPredicateUseSubquerys:(BOOL)useSubQuerys;
 
 
 

@@ -7,17 +7,18 @@
 //
 
 #import "JxCoreDataPredicateBuilder.h"
-#import "AKFilterViewController.h"
-
 #import "Logging.h"
 
 
 
 @interface JxCoreDataPredicateBuilder ()
 
+@property (strong, nonatomic) NSString *namespace;
+
 @property (strong, nonatomic) NSDictionary *config;
 @property (strong, nonatomic) NSMutableArray *dataFilter;
 @property (strong, nonatomic) NSMutableDictionary *dataFiltervalues;
+
 
 @end
 
@@ -25,22 +26,28 @@
 
 #pragma mark init
 
-+ (JxCoreDataPredicateBuilder *)sharedManager{
++ (JxCoreDataPredicateBuilder *)sharedManager __deprecated_msg("Use Singleton with Namespace"){
+    
+    return [self sharedManagerInNamespace:@""];
+}
++ (JxCoreDataPredicateBuilder *)sharedManagerInNamespace:(NSString *)newNamespace{
     static JxCoreDataPredicateBuilder *sharedInstance = nil;
     static dispatch_once_t pred;
     
     if (sharedInstance) return sharedInstance;
     
     dispatch_once(&pred, ^{
-        sharedInstance = [[JxCoreDataPredicateBuilder alloc] init];
+        sharedInstance = [[JxCoreDataPredicateBuilder alloc] initWithNamespace:newNamespace];
     });
     
     return sharedInstance;
 }
-- (id)init{
+
+- (id)initWithNamespace:(NSString *)namespace{
     if ((self = [super init])) {
         LLog();
         
+        _namespace = namespace;
         _dataFilter = [NSMutableArray array];
         _dataFiltervalues = [NSMutableDictionary dictionary];
         
@@ -88,7 +95,7 @@
     NSDictionary *dict = [_config objectForKey:propKey];
     
     JxCoreDataPredicateConfig *config = [[JxCoreDataPredicateConfig alloc] init];
-    
+    config.filterKey = propKey;
     [config setValuesForKeysWithDictionary:dict];
     
     return config;
@@ -97,11 +104,11 @@
 - (void)loadFilter{
     LLog();
     
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"filter"] != nil) {
-        _dataFilter = [[NSUserDefaults standardUserDefaults] objectForKey:@"filter"];
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:[NSString stringWithFormat:@"filter%@", _namespace]] != nil) {
+        _dataFilter = [[NSUserDefaults standardUserDefaults] objectForKey:[NSString stringWithFormat:@"filter%@", _namespace]];
     }
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:@"filtervalues"] != nil) {
-        NSData *dataFilterValuesData = [[NSUserDefaults standardUserDefaults] objectForKey:@"filtervalues"];
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:[NSString stringWithFormat:@"filtervalues%@", _namespace]] != nil) {
+        NSData *dataFilterValuesData = [[NSUserDefaults standardUserDefaults] objectForKey:[NSString stringWithFormat:@"filtervalues%@", _namespace]];
         if (dataFilterValuesData != nil && [dataFilterValuesData isKindOfClass:[NSData class]]) {
             _dataFiltervalues = [NSKeyedUnarchiver unarchiveObjectWithData:dataFilterValuesData];
         }
@@ -126,13 +133,13 @@
     DLog(@"save values %@", _dataFiltervalues);
     
     
-    [[NSUserDefaults standardUserDefaults] setObject:_dataFilter forKey:@"filter"];
-    [[NSUserDefaults standardUserDefaults] setObject:[NSKeyedArchiver archivedDataWithRootObject:_dataFiltervalues] forKey:@"filtervalues"];
+    [[NSUserDefaults standardUserDefaults] setObject:_dataFilter forKey:[NSString stringWithFormat:@"filter%@", _namespace]];
+    [[NSUserDefaults standardUserDefaults] setObject:[NSKeyedArchiver archivedDataWithRootObject:_dataFiltervalues] forKey:[NSString stringWithFormat:@"filtervalues%@", _namespace]];
     
     [[NSUserDefaults standardUserDefaults] synchronize];
     
-    DLog(@"saved filter %@", [[NSUserDefaults standardUserDefaults] objectForKey:@"filter"]);
-    DLog(@"saved values %@", [NSKeyedUnarchiver unarchiveObjectWithData:[[NSUserDefaults standardUserDefaults] objectForKey:@"filtervalues"]]);
+    DLog(@"saved filter %@", [[NSUserDefaults standardUserDefaults] objectForKey:[NSString stringWithFormat:@"filter%@", _namespace]]);
+    DLog(@"saved values %@", [NSKeyedUnarchiver unarchiveObjectWithData:[[NSUserDefaults standardUserDefaults] objectForKey:[NSString stringWithFormat:@"filtervalues%@", _namespace]]]);
     
     
     [[NSNotificationCenter defaultCenter] postNotificationName:kJxCoreDataPredicateDidChange object:nil];
@@ -191,6 +198,9 @@
 
 #pragma mark Get Filter
 - (NSPredicate *)getPredicate{
+    return [self getPredicateUseSubquerys:YES];
+}
+- (NSPredicate *)getPredicateUseSubquerys:(BOOL)useSubQuerys{
     LLog();
     NSString *predicateString = @"";
     
@@ -206,27 +216,49 @@
             if ([filterv isKindOfClass:[JxCoreDataPredicateFilterContains class]]) {
                 JxCoreDataPredicateFilterContains *filterObject = (JxCoreDataPredicateFilterContains *)filterv;
                 
-                if (filterObject != nil && [filterObject isKindOfClass:[JxCoreDataPredicateFilterContains class]]) {
-                    if ([[filterObject exclude] count] > 0) {
-                        predicateString = [predicateString stringByAppendingFormat:@" AND ( "];
-                        for (NSString *v in filterObject.exclude) {
-                            predicateString = [predicateString stringByAppendingFormat:@" NOT ( %@ LIKE '%@' ) AND ", filter, v];
-                        }
-                        
-                        predicateString = [predicateString substringToIndex:predicateString.length-4];
-                        predicateString = [predicateString stringByAppendingFormat:@" ) "];
-                        
-                    }else if ([[filterObject contains] count] > 0) {
-                        predicateString = [predicateString stringByAppendingFormat:@" AND ( "];
-                        for (NSString *v in filterObject.contains) {
-                            predicateString = [predicateString stringByAppendingFormat:@"%@ LIKE '%@' OR ", filter, v];
-                        }
-                        
-                        predicateString = [predicateString substringToIndex:predicateString.length-3];
-                        predicateString = [predicateString stringByAppendingFormat:@" ) "];
-                        
-                    }
+                NSString *compare = @"LIKE";
+                NSArray *filterParts = [filter componentsSeparatedByString:@"."];
+                if ([filterParts count] > 1 && useSubQuerys) {
+//                    NSString *filterSubKeyPath = @"";
+//                    NSString *filterMainKey = @"";
+//                    int count = 0;
+//                    for (NSString *part in filterParts) {
+//                        if (count == 0) {
+//                            filterMainKey = part;
+//                        }else{
+//                            filterSubKeyPath = [filterSubKeyPath stringByAppendingFormat:@".%@", part];
+//                        }
+//                        count++;
+//                    }
+                    
+                    //compare = @"CONTAINS";
+
+                    
+                }else{
+                
+                    
                 }
+                    if (filterObject != nil && [filterObject isKindOfClass:[JxCoreDataPredicateFilterContains class]]) {
+                        if ([[filterObject exclude] count] > 0) {
+                            predicateString = [predicateString stringByAppendingFormat:@" AND ( "];
+                            for (NSString *v in filterObject.exclude) {
+                                predicateString = [predicateString stringByAppendingFormat:@" NOT ( %@ %@ '%@' ) AND ", filter, compare, v];
+                            }
+                            
+                            predicateString = [predicateString substringToIndex:predicateString.length-4];
+                            predicateString = [predicateString stringByAppendingFormat:@" ) "];
+                            
+                        }else if ([[filterObject contains] count] > 0) {
+                            predicateString = [predicateString stringByAppendingFormat:@" AND ( "];
+                            for (NSString *v in filterObject.contains) {
+                                predicateString = [predicateString stringByAppendingFormat:@"%@ %@ '%@' OR ", filter, compare, v];
+                            }
+                            
+                            predicateString = [predicateString substringToIndex:predicateString.length-3];
+                            predicateString = [predicateString stringByAppendingFormat:@" ) "];
+                            
+                        }
+                    }
                 
             }else if ([filterv isKindOfClass:[JxCoreDataPredicateFilterRange class]]) {
                 
@@ -235,7 +267,7 @@
                 NSInteger to = [filterObject.to integerValue];
                 
                 NSArray *filterParts = [filter componentsSeparatedByString:@"."];
-                if ([filterParts count] > 1) {
+                if ([filterParts count] > 1 && useSubQuerys) {
                     NSString *filterSubKeyPath = @"";
                     NSString *filterMainKey = @"";
                     int count = 0;

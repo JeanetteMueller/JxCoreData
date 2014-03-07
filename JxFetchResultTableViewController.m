@@ -150,8 +150,6 @@
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView{
     LLog();
     
-    //NSLog(@"offset %f + height %f = %f", scrollView.contentOffset.y, scrollView.frame.size.height, scrollView.contentOffset.y+scrollView.frame.size.height);
-    
     NSLog(@"size %f", scrollView.contentSize.height);
     
     
@@ -161,70 +159,9 @@
     
 }
 
-//- (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath
-//{
-//    LLog();
-//    // Return NO if you do not want the specified item to be editable.
-//    return NO;
-//}
-//- (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath
-//{
-//    LLog();
-//    if (editingStyle == UITableViewCellEditingStyleDelete) {
-//        // Delete the row from the data source
-//        //[tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
-//        
-//        
-//        
-//        NSAssert([self becomeFirstResponder], @"Sorry, UIMenuController will not work with %@ since it cannot become first responder", self.view);
-//        UIMenuController* menuController = [UIMenuController sharedMenuController];
-//
-//        ///self.selectedIndex = indexPath.row;
-//        [menuController setTargetRect:[tableView rectForRowAtIndexPath:indexPath] inView:tableView];
-//
-//        [menuController setMenuItems:@[
-//                                       [[UIMenuItem alloc] initWithTitle:@"Play" action:@selector(playVideo:)],
-//                                       [[UIMenuItem alloc] initWithTitle:@"Edit" action:@selector(editVideo:)],
-//                                       [[UIMenuItem alloc] initWithTitle:@"Delete" action:@selector(deleteVideo:)],
-//                                       [[UIMenuItem alloc] initWithTitle:@"Share" action:@selector(shareVideo:)],
-//                                       [[UIMenuItem alloc] initWithTitle:@"Cancel" action:@selector(cancelMenu:)]
-//                                       ]];
-//        
-//        menuController.arrowDirection = UIMenuControllerArrowDefault;
-//        
-//        [menuController setMenuVisible:YES animated:NO];
-//        
-//        [tableView setEditing:NO animated:YES];
-//    }
-//    else if (editingStyle == UITableViewCellEditingStyleInsert) {
-//        // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view
-//    }
-//}
-
 
 
 #pragma mark - Table view delegate
-
-- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
-{
-    LLog();
-    // Navigation logic may go here. Create and push another view controller.
-    /*
-     <#DetailViewController#> *detailViewController = [[DetailViewController alloc] initWithNibName:@"<#Nib name#>" bundle:nil];
-     // ...
-     // Pass the selected object to the new view controller.
-     [self.navigationController pushViewController:detailViewController animated:YES];
-     */
-
-
-}
-//- (UITableViewCellEditingStyle)tableView:(UITableView *)tableView editingStyleForRowAtIndexPath:(NSIndexPath *)indexPath {
-//    return UITableViewCellEditingStyleNone;
-//}
-//- (BOOL)tableView:(UITableView *)tableView shouldIndentWhileEditingRowAtIndexPath:(NSIndexPath *)indexPath {
-//    return NO;
-//}
-
 
 
 - (NSString *)tableView:(UITableView *)tableView titleForDeleteConfirmationButtonForRowAtIndexPath:(NSIndexPath *)indexPath{

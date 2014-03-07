@@ -10,6 +10,8 @@
 
 @interface JxCoreDataPredicateConfig : NSObject
 
+@property (strong, nonatomic) NSString *filterKey;
+
 @property (strong, nonatomic) NSString *filterSelector;
 @property (strong, nonatomic) NSString *filterGetFunction;
 
