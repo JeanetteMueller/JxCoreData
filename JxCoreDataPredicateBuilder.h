@@ -26,12 +26,18 @@
 
 #pragma mark Create Filter
 - (void)resetFilter;
+- (void)resetFilterSilent:(BOOL)silent;
+
+
 - (NSMutableArray *)filter;
 - (NSMutableDictionary *)filtervalues;
-- (void)setFilter:(NSMutableArray *)newFilter;
+
 - (void)addFilterType:(NSString *)filterType;
 - (void)addFilter:(id)newFilterValues forType:(NSString *)filterType;
+
 - (void)removeFilterByType:(NSString *)filterType;
+- (void)removeFilterByType:(NSString *)filterType inSilence:(BOOL)silent;
+
 - (JxCoreDataPredicateFilter *)getFilterValueFromFilter:(NSString *)filterName;
 
 #pragma mark Get Filter

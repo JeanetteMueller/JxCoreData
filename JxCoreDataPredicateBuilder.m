@@ -34,32 +34,40 @@
     static JxCoreDataPredicateBuilder *sharedInstance = nil;
     static dispatch_once_t pred;
     
-    if (sharedInstance) return sharedInstance;
+    if (sharedInstance){
+        
+        [sharedInstance loadNamespace:newNamespace];
+        
+        return sharedInstance;
+    }
     
     dispatch_once(&pred, ^{
-        sharedInstance = [[JxCoreDataPredicateBuilder alloc] initWithNamespace:newNamespace];
+        sharedInstance = [[JxCoreDataPredicateBuilder alloc] init];
     });
+    
+    [sharedInstance loadNamespace:newNamespace];
     
     return sharedInstance;
 }
-
-- (id)initWithNamespace:(NSString *)namespace{
-    if ((self = [super init])) {
-        LLog();
-        
-        _namespace = namespace;
-        _dataFilter = [NSMutableArray array];
-        _dataFiltervalues = [NSMutableDictionary dictionary];
-        
+- (id)init{
+    self = [super init];
+    if (self) {
         [self loadPropertyConfig];
-        
-        [self loadFilter];
-        
     }
     return self;
 }
+- (void)loadNamespace:(NSString *)namespace{
+
+    DLog(@"namespace: %@", namespace);
+    
+    _namespace = namespace;
+    _dataFilter = [NSMutableArray array];
+    _dataFiltervalues = [NSMutableDictionary dictionary];
+    
+    [self loadFilter];
+
+}
 - (void)loadPropertyConfig{
-    LLog();
     NSArray *paths = NSSearchPathForDirectoriesInDomains (NSDocumentDirectory, NSUserDomainMask, YES);
     NSString *documentsPath = [paths objectAtIndex:0];
     NSString *plistPath = [documentsPath stringByAppendingPathComponent:@"CoreDataPredicateConfig.plist"];
@@ -102,55 +110,69 @@
 }
 #pragma mark load/save Filters
 - (void)loadFilter{
-    LLog();
+    DLog(@"namespace: %@", _namespace);
     
     if ([[NSUserDefaults standardUserDefaults] objectForKey:[NSString stringWithFormat:@"filter%@", _namespace]] != nil) {
-        _dataFilter = [[NSUserDefaults standardUserDefaults] objectForKey:[NSString stringWithFormat:@"filter%@", _namespace]];
+        _dataFilter = [NSMutableArray arrayWithArray:[[NSUserDefaults standardUserDefaults] objectForKey:[NSString stringWithFormat:@"filter%@", _namespace]]];
     }
     if ([[NSUserDefaults standardUserDefaults] objectForKey:[NSString stringWithFormat:@"filtervalues%@", _namespace]] != nil) {
         NSData *dataFilterValuesData = [[NSUserDefaults standardUserDefaults] objectForKey:[NSString stringWithFormat:@"filtervalues%@", _namespace]];
         if (dataFilterValuesData != nil && [dataFilterValuesData isKindOfClass:[NSData class]]) {
-            _dataFiltervalues = [NSKeyedUnarchiver unarchiveObjectWithData:dataFilterValuesData];
+            _dataFiltervalues = [NSMutableDictionary dictionaryWithDictionary:[NSKeyedUnarchiver unarchiveObjectWithData:dataFilterValuesData]];
         }
     }
 
-    if (!_dataFilter) {
+    if (!_dataFilter || [_dataFilter isKindOfClass:[NSNull class]]) {
         _dataFilter = [NSMutableArray array];
     }
     
-    if (!_dataFiltervalues) {
+    if (!_dataFiltervalues || [_dataFiltervalues isKindOfClass:[NSNull class]]) {
         _dataFiltervalues = [NSMutableDictionary dictionary];
     }
     
     
-    NSLog(@"load filter %@", _dataFilter);
-    NSLog(@"load values %@", _dataFiltervalues);
+//    NSLog(@"load filter %@", _dataFilter);
+//    NSLog(@"load values %@", _dataFiltervalues);
 }
 - (void)saveFilter{
     LLog();
     
-    DLog(@"save filter %@", _dataFilter);
-    DLog(@"save values %@", _dataFiltervalues);
+//    DLog(@"save filter %@", _dataFilter);
+//    DLog(@"save values %@", _dataFiltervalues);
     
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     
-    [[NSUserDefaults standardUserDefaults] setObject:_dataFilter forKey:[NSString stringWithFormat:@"filter%@", _namespace]];
-    [[NSUserDefaults standardUserDefaults] setObject:[NSKeyedArchiver archivedDataWithRootObject:_dataFiltervalues] forKey:[NSString stringWithFormat:@"filtervalues%@", _namespace]];
+    [defaults setObject:_dataFilter forKey:[NSString stringWithFormat:@"filter%@", _namespace]];
+    [defaults setObject:[NSKeyedArchiver archivedDataWithRootObject:_dataFiltervalues] forKey:[NSString stringWithFormat:@"filtervalues%@", _namespace]];
     
-    [[NSUserDefaults standardUserDefaults] synchronize];
+    [defaults synchronize];
     
-    DLog(@"saved filter %@", [[NSUserDefaults standardUserDefaults] objectForKey:[NSString stringWithFormat:@"filter%@", _namespace]]);
-    DLog(@"saved values %@", [NSKeyedUnarchiver unarchiveObjectWithData:[[NSUserDefaults standardUserDefaults] objectForKey:[NSString stringWithFormat:@"filtervalues%@", _namespace]]]);
+    DLog(@"saved filter %@", [defaults objectForKey:[NSString stringWithFormat:@"filter%@", _namespace]]);
+    DLog(@"saved values %@", [NSKeyedUnarchiver unarchiveObjectWithData:[defaults objectForKey:[NSString stringWithFormat:@"filtervalues%@", _namespace]]]);
     
     
     [[NSNotificationCenter defaultCenter] postNotificationName:kJxCoreDataPredicateDidChange object:nil];
 }
 #pragma mark Create Filter
-- (void)resetFilter{
+- (void)resetFilterAllNamespaces{
     LLog();
     
     _dataFilter = [NSMutableArray array];
     _dataFiltervalues = [NSMutableDictionary dictionary];
     [self saveFilter];
+}
+- (void)resetFilter{
+    [self resetFilterSilent:NO];
+}
+- (void)resetFilterSilent:(BOOL)silent{
+    DLog(@"silent %d", silent);
+    
+    _dataFilter = [NSMutableArray array];
+    _dataFiltervalues = [NSMutableDictionary dictionary];
+    if (!silent) {
+        [self saveFilter];
+    }
+    
 }
 - (NSMutableArray *)filter{
     
@@ -158,12 +180,6 @@
 }
 - (NSMutableDictionary *)filtervalues{
     return _dataFiltervalues;
-}
-- (void)setFilter:(NSMutableArray *)newFilter{
-    
-    _dataFilter = newFilter;
-    
-    [self saveFilter];
 }
 - (void)addFilterType:(NSString *)filterType{
     
@@ -173,7 +189,7 @@
 }
 - (void)addFilter:(id)newFilterValues forType:(NSString *)filterType{
     
-    //DLog(@"typ %@\nvalues %@", filterType, newFilterValues);
+    DLog(@"typ %@\nvalues %@", filterType, newFilterValues);
     
     if (![_dataFilter containsObject:filterType]) {
         [_dataFilter addObject:filterType];
@@ -184,13 +200,22 @@
     [self saveFilter];
 }
 - (void)removeFilterByType:(NSString *)filterType{
+    [self removeFilterByType:filterType inSilence:NO];
+}
+- (void)removeFilterByType:(NSString *)filterType inSilence:(BOOL)silent{
+    DLog(@"remove %@", filterType);
     
-    //DLog(@"remove %@", filterType);
+    if (_dataFilter) {
+        [_dataFilter removeObject:filterType];
+    }
+    if (_dataFiltervalues) {
+        [_dataFiltervalues removeObjectForKey:filterType];
+    }
     
-    [_dataFilter removeObject:filterType];
-    [_dataFiltervalues removeObjectForKey:filterType];
+    if (!silent) {
+        [self saveFilter];
+    }
     
-    [self saveFilter];
 }
 - (JxCoreDataPredicateFilter *)getFilterValueFromFilter:(NSString *)filterName{
     return [_dataFiltervalues objectForKey:filterName];
