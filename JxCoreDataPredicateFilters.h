@@ -71,3 +71,9 @@ typedef enum
 @end
 
 
+
+@interface JxCoreDataPredicateFilterBool : JxCoreDataPredicateFilter
+
+@property (strong, nonatomic) NSNumber *yesOrNo;
+
+@end

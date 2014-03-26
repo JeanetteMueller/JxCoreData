@@ -20,6 +20,8 @@
 - (void)saveContext;
 - (void)flushStore;
 
+- (NSString *)getDBFileName;
+
 - (BOOL)replaceCurrentSQLiteDBWithNewDB:(NSURL *)pathToNewDBFile;
 
 @end

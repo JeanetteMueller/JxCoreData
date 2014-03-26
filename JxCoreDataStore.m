@@ -59,30 +59,50 @@
     
 }
 - (BOOL)replaceCurrentSQLiteDBWithNewDB:(NSURL *)pathToNewDBFile{
-    NSArray *stores = [_persistentStoreCoordinator persistentStores];
+    DLog(@"newDB %@", pathToNewDBFile);
     
-    for(NSPersistentStore *store in stores) {
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    
+    if ([fileManager fileExistsAtPath:pathToNewDBFile.path]) {
         
-        if ([store.type isEqualToString:NSSQLiteStoreType]) {
-            [_persistentStoreCoordinator removePersistentStore:store error:nil];
-            [[NSFileManager defaultManager] removeItemAtPath:store.URL.path error:nil];
+        NSArray *stores = [[self persistentStoreCoordinator] persistentStores];
+        
+        for(NSPersistentStore *store in stores) {
+            
+            if ([store.type isEqualToString:NSSQLiteStoreType]) {
+                [_persistentStoreCoordinator removePersistentStore:store error:nil];
+                [fileManager removeItemAtPath:store.URL.path error:nil];
+            }
         }
-    }
-    
-    NSURL *storeURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:[self getDBFileName]];
-    
-    NSError *error;
-    
-    if ([[NSFileManager defaultManager] moveItemAtURL:pathToNewDBFile toURL:storeURL error:&error]) {
         
-        if(![_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeURL options:[self getSQLiteOptions] error:&error]){
+        NSURL *storeURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:[self getDBFileName]];
+        
+        NSError *error;
+        
+        if ([fileManager removeItemAtURL:storeURL error:&error]) {
+            NSLog(@"OLD DB Removed");
+        }else{
+            NSLog(@"NO OLD DB FOUND TO REMOVE");
+        }
+        
+        if ([self copyExistingDBFileToWorkingdirectory:storeURL]) {
+            NSLog(@"from    %@", pathToNewDBFile);
+            NSLog(@"to copy %@", storeURL);
+            
+            if(![_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeURL options:[self getSQLiteOptions] error:&error]){
+                NSLog(@"Oops, could not add PersistentStore");
+                NSLog(@"ERROR %@, %@", error, [error userInfo]);
+                
+                //abort();
+            }
+            
+        }else{
             NSLog(@"ERROR %@, %@", error, [error userInfo]);
             abort();
         }
-        
     }else{
-        NSLog(@"ERROR %@, %@", error, [error userInfo]);
-        abort();
+        NSLog(@"neu einzufügende DB existiert nicht");
+        return NO;
     }
     
     return YES;
@@ -146,7 +166,9 @@
     return [NSString stringWithFormat:@"%@.sqlite", _name];
 }
 - (NSPersistentStoreCoordinator *)persistentStoreCoordinator{
+    
     if (_persistentStoreCoordinator != nil) {
+        DLog(@"direct return");
         return _persistentStoreCoordinator;
     }
     
@@ -154,10 +176,12 @@
         dispatch_sync(dispatch_get_main_queue(), ^{
             (void)[self persistentStoreCoordinator];
         });
+        
+        DLog(@"return after init");
         return _persistentStoreCoordinator;
     }
     
-    
+    DLog(@"create");
     self.persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
     
     
@@ -166,35 +190,8 @@
     
     NSURL *storeURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:[self getDBFileName]];
     
-    if (![[NSFileManager defaultManager] fileExistsAtPath:storeURL.path]) {
-        
-        NSString *sqliteFilePath = [[NSBundle mainBundle] pathForResource:_name ofType:@"sqlite"];
-        
-        NSLog(@"sqliteFilePath %@", sqliteFilePath);
-        if (sqliteFilePath) {
-            
-            if ([[NSFileManager defaultManager] fileExistsAtPath:sqliteFilePath]){
-                
-                NSURL *documentPath = [NSURL fileURLWithPath:sqliteFilePath];
-                NSLog(@"documentPath %@", documentPath);
+    [self copyExistingDBFileToWorkingdirectory:storeURL];
 
-                
-                if (![[NSFileManager defaultManager] copyItemAtURL:documentPath toURL:storeURL error:&error]) {
-                    NSLog(@"Oops, could copy preloaded data");
-                    NSLog(@"ERROR %@, %@", error, [error userInfo]);
-                    
-                }else{
-                    NSLog(@"kopiere vorhandene sqlite DB an richtigen Ort");
-                }
-            }else{
-                NSLog(@"Projekteidene sqlite DB existiert nicht");
-            }
-        }else{
-            NSLog(@"sqliteFilePath nicht definiert");
-        }
-    }else{
-        NSLog(@"DB existiert bereits an richtigem Ort");
-    }
     
 
     if (![_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType
@@ -206,10 +203,18 @@
         NSLog(@"ERROR %@, %@", error, [error userInfo]);
         //abort();
         
-        [[NSFileManager defaultManager] removeItemAtPath:storeURL.path error:&error];
+        [[NSFileManager defaultManager] removeItemAtURL:storeURL error:&error];
         
-        
-        return [self persistentStoreCoordinator];
+//        
+//        if (![_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType
+//                                                       configuration:nil
+//                                                                 URL:storeURL
+//                                                             options:[self getSQLiteOptions]
+//                                                               error:&error]) {
+//            
+//            NSLog(@"ERROR %@, %@", error, [error userInfo]);
+//        }
+
     }
     
     return _persistentStoreCoordinator;
@@ -217,5 +222,42 @@
 - (NSURL *)applicationDocumentsDirectory{
     return [[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] lastObject];
 }
-
+- (BOOL)copyExistingDBFileToWorkingdirectory:(NSURL *)storeURL{
+    
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    
+    NSError *error;
+    if (![fileManager fileExistsAtPath:storeURL.path]) {
+        
+        NSString *sqliteFilePath = [[NSBundle mainBundle] pathForResource:_name ofType:@"sqlite"];
+        
+        NSLog(@"sqliteFilePath %@", sqliteFilePath);
+        if (sqliteFilePath && [sqliteFilePath isKindOfClass:[NSString class]] && ![sqliteFilePath isEqualToString:@""]) {
+            
+            if ([fileManager fileExistsAtPath:sqliteFilePath]){
+                
+                NSURL *documentPath = [NSURL fileURLWithPath:sqliteFilePath];
+                NSLog(@"documentPath %@", documentPath);
+                
+                
+                if (![fileManager copyItemAtURL:documentPath toURL:storeURL error:&error]) {
+                    NSLog(@"Oops, could copy preloaded data");
+                }else{
+                    NSLog(@"kopiere vorhandene sqlite DB an richtigen Ort");
+                    return YES;
+                }
+            }else{
+                NSLog(@"Projekteidene sqlite DB existiert nicht");
+            }
+        }else{
+            NSLog(@"sqliteFilePath nicht definiert");
+        }
+    }else{
+        NSLog(@"DB existiert bereits an richtigem Ort");
+        return YES;
+    }
+    
+    NSLog(@"ERROR %@, %@", error, [error userInfo]);
+    return NO;
+}
 @end

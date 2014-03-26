@@ -73,17 +73,17 @@
     
     if (!_lastPageReached) {
         DLog(@"DO IT");
-        int oldLimit = self.fetchedResultsController.fetchRequest.fetchLimit;
+        NSUInteger oldLimit = self.fetchedResultsController.fetchRequest.fetchLimit;
 
-        int loadedItemsCount = [self.fetchedResultsController.fetchedObjects count];
+        NSUInteger loadedItemsCount = [self.fetchedResultsController.fetchedObjects count];
         
         if (loadedItemsCount == oldLimit) {
             
 
         
-            int sectionCount = [tableView numberOfSections];
+            NSInteger sectionCount = [tableView numberOfSections];
         
-            int itemsInLastSection = 0;
+            NSInteger itemsInLastSection = 0;
             if (sectionCount > 0) {
                 itemsInLastSection = [tableView numberOfRowsInSection:sectionCount-1];
             }
@@ -99,8 +99,8 @@
             DLog(@"step 1");
             [self.tableView beginUpdates];
             
-            int newItemsInLastSection = [self tableView:tableView numberOfRowsInSection:sectionCount-1];
-            int newSectionCount = [self numberOfSectionsInTableView:tableView];
+            NSInteger newItemsInLastSection = [self tableView:tableView numberOfRowsInSection:sectionCount-1];
+            NSInteger newSectionCount = [self numberOfSectionsInTableView:tableView];
             
             
             

@@ -23,6 +23,7 @@
 
 #pragma mark Config
 - (JxCoreDataPredicateConfig *)getConfigForKey:(NSString *)propKey;
+- (void)saveFilter;
 
 #pragma mark Create Filter
 - (void)resetFilter;

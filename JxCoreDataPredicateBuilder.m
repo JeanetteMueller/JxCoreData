@@ -167,8 +167,9 @@
 - (void)resetFilterSilent:(BOOL)silent{
     DLog(@"silent %d", silent);
     
-    _dataFilter = [NSMutableArray array];
-    _dataFiltervalues = [NSMutableDictionary dictionary];
+    [_dataFilter removeAllObjects];
+    [_dataFiltervalues removeAllObjects];
+    
     if (!silent) {
         [self saveFilter];
     }
@@ -229,40 +230,42 @@
     LLog();
     NSString *predicateString = @"";
     
-    for (NSString *filter in [_dataFiltervalues allKeys]) {
-        NSLog(@"Filter: %@", filter);
+    if (_dataFiltervalues && [_dataFiltervalues isKindOfClass:[NSMutableDictionary class]]) {
         
-        id filterv = [_dataFiltervalues objectForKey:filter];
-        
-        NSLog(@"filterv %@", filterv);
-        
-        if ([[filterv class] isSubclassOfClass:[JxCoreDataPredicateFilter class]]) {
+        for (NSString *filter in [_dataFiltervalues allKeys]) {
+            NSLog(@"Filter: %@", filter);
             
-            if ([filterv isKindOfClass:[JxCoreDataPredicateFilterContains class]]) {
-                JxCoreDataPredicateFilterContains *filterObject = (JxCoreDataPredicateFilterContains *)filterv;
+            id filterv = [_dataFiltervalues objectForKey:filter];
+            
+            NSLog(@"filterv %@", filterv);
+            
+            if ([[filterv class] isSubclassOfClass:[JxCoreDataPredicateFilter class]]) {
                 
-                NSString *compare = @"LIKE";
-                NSArray *filterParts = [filter componentsSeparatedByString:@"."];
-                if ([filterParts count] > 1 && useSubQuerys) {
-//                    NSString *filterSubKeyPath = @"";
-//                    NSString *filterMainKey = @"";
-//                    int count = 0;
-//                    for (NSString *part in filterParts) {
-//                        if (count == 0) {
-//                            filterMainKey = part;
-//                        }else{
-//                            filterSubKeyPath = [filterSubKeyPath stringByAppendingFormat:@".%@", part];
-//                        }
-//                        count++;
-//                    }
+                if ([filterv isKindOfClass:[JxCoreDataPredicateFilterContains class]]) {
+                    JxCoreDataPredicateFilterContains *filterObject = (JxCoreDataPredicateFilterContains *)filterv;
                     
-                    //compare = @"CONTAINS";
-
-                    
-                }else{
-                
-                    
-                }
+                    NSString *compare = @"LIKE";
+                    NSArray *filterParts = [filter componentsSeparatedByString:@"."];
+                    if ([filterParts count] > 1 && useSubQuerys) {
+                        //                    NSString *filterSubKeyPath = @"";
+                        //                    NSString *filterMainKey = @"";
+                        //                    int count = 0;
+                        //                    for (NSString *part in filterParts) {
+                        //                        if (count == 0) {
+                        //                            filterMainKey = part;
+                        //                        }else{
+                        //                            filterSubKeyPath = [filterSubKeyPath stringByAppendingFormat:@".%@", part];
+                        //                        }
+                        //                        count++;
+                        //                    }
+                        
+                        //compare = @"CONTAINS";
+                        
+                        
+                    }else{
+                        
+                        
+                    }
                     if (filterObject != nil && [filterObject isKindOfClass:[JxCoreDataPredicateFilterContains class]]) {
                         if ([[filterObject exclude] count] > 0) {
                             predicateString = [predicateString stringByAppendingFormat:@" AND ( "];
@@ -284,82 +287,105 @@
                             
                         }
                     }
-                
-            }else if ([filterv isKindOfClass:[JxCoreDataPredicateFilterRange class]]) {
-                
-                JxCoreDataPredicateFilterRange *filterObject = (JxCoreDataPredicateFilterRange *)filterv;
-                NSInteger from = [filterObject.from integerValue];
-                NSInteger to = [filterObject.to integerValue];
-                
-                NSArray *filterParts = [filter componentsSeparatedByString:@"."];
-                if ([filterParts count] > 1 && useSubQuerys) {
-                    NSString *filterSubKeyPath = @"";
-                    NSString *filterMainKey = @"";
-                    int count = 0;
-                    for (NSString *part in filterParts) {
-                        if (count == 0) {
-                            filterMainKey = part;
-                        }else{
-                            filterSubKeyPath = [filterSubKeyPath stringByAppendingFormat:@".%@", part];
+                    
+                }else if ([filterv isKindOfClass:[JxCoreDataPredicateFilterRange class]]) {
+                    
+                    JxCoreDataPredicateFilterRange *filterObject = (JxCoreDataPredicateFilterRange *)filterv;
+                    NSInteger from = [filterObject.from integerValue];
+                    NSInteger to = [filterObject.to integerValue];
+                    
+                    NSArray *filterParts = [filter componentsSeparatedByString:@"."];
+                    if ([filterParts count] > 1 && useSubQuerys) {
+                        NSString *filterSubKeyPath = @"";
+                        NSString *filterMainKey = @"";
+                        int count = 0;
+                        for (NSString *part in filterParts) {
+                            if (count == 0) {
+                                filterMainKey = part;
+                            }else{
+                                filterSubKeyPath = [filterSubKeyPath stringByAppendingFormat:@".%@", part];
+                            }
+                            count++;
                         }
-                        count++;
+                        // AND $f%@ >= %d
+                        //, filterSubKeyPath, from
+                        predicateString = [predicateString stringByAppendingFormat:@" AND ( SUBQUERY(%@, $p, $p%@ >= %d AND $p%@ <= %d).@count > 0 ) ", filterMainKey, filterSubKeyPath, from, filterSubKeyPath, to];
+                    }else{
+                        predicateString = [predicateString stringByAppendingFormat:@" AND ( %@ BETWEEN {%d, %d} ) ", filter, from, to ];
                     }
-                    // AND $f%@ >= %d
-                    //, filterSubKeyPath, from
-                    predicateString = [predicateString stringByAppendingFormat:@" AND ( SUBQUERY(%@, $p, $p%@ >= %d AND $p%@ <= %d).@count > 0 ) ", filterMainKey, filterSubKeyPath, from, filterSubKeyPath, to];
-                }else{
-                    predicateString = [predicateString stringByAppendingFormat:@" AND ( %@ BETWEEN {%d, %d} ) ", filter, from, to ];
-                }
-
-            }else if ([filterv isKindOfClass:[JxCoreDataPredicateFilterSmaller class]]){
-                
-                JxCoreDataPredicateFilterSmaller *filterObject = (JxCoreDataPredicateFilterSmaller *)filterv;
-                NSInteger smaller = [filterObject.smaller integerValue];
-                
-                
-                
-                NSArray *filterParts = [filter componentsSeparatedByString:@"."];
-                if ([filterParts count] > 1) {
-                    NSString *filterSubKeyPath = @"";
-                    NSString *filterMainKey = @"";
-                    int count = 0;
-                    for (NSString *part in filterParts) {
-                        if (count == 0) {
-                            filterMainKey = part;
-                        }else{
-                            filterSubKeyPath = [filterSubKeyPath stringByAppendingFormat:@".%@", part];
+                    
+                }else if ([filterv isKindOfClass:[JxCoreDataPredicateFilterSmaller class]]){
+                    
+                    JxCoreDataPredicateFilterSmaller *filterObject = (JxCoreDataPredicateFilterSmaller *)filterv;
+                    NSInteger smaller = [filterObject.smaller integerValue];
+                    
+                    
+                    
+                    NSArray *filterParts = [filter componentsSeparatedByString:@"."];
+                    if ([filterParts count] > 1) {
+                        NSString *filterSubKeyPath = @"";
+                        NSString *filterMainKey = @"";
+                        int count = 0;
+                        for (NSString *part in filterParts) {
+                            if (count == 0) {
+                                filterMainKey = part;
+                            }else{
+                                filterSubKeyPath = [filterSubKeyPath stringByAppendingFormat:@".%@", part];
+                            }
+                            count++;
                         }
-                        count++;
+                        predicateString = [predicateString stringByAppendingFormat:@" AND ( SUBQUERY(%@, $p, $p%@ <= %d).@count > 0 ) ", filterMainKey, filterSubKeyPath, smaller];
+                    }else{
+                        predicateString = [predicateString stringByAppendingFormat:@" AND ( %@ <= %d ) ", filter, smaller];
                     }
-                    predicateString = [predicateString stringByAppendingFormat:@" AND ( SUBQUERY(%@, $p, $p%@ <= %d).@count > 0 ) ", filterMainKey, filterSubKeyPath, smaller];
-                }else{
-                    predicateString = [predicateString stringByAppendingFormat:@" AND ( %@ <= %d ) ", filter, smaller];
-                }
-            }else if ([filterv isKindOfClass:[JxCoreDataPredicateFilterLarger class]]){
-                
-                JxCoreDataPredicateFilterLarger *filterObject = (JxCoreDataPredicateFilterLarger *)filterv;
-                NSInteger larger = [filterObject.larger integerValue];
-                
-                NSArray *filterParts = [filter componentsSeparatedByString:@"."];
-                if ([filterParts count] > 1) {
-                    NSString *filterSubKeyPath = @"";
-                    NSString *filterMainKey = @"";
-                    int count = 0;
-                    for (NSString *part in filterParts) {
-                        if (count == 0) {
-                            filterMainKey = part;
-                        }else{
-                            filterSubKeyPath = [filterSubKeyPath stringByAppendingFormat:@".%@", part];
+                }else if ([filterv isKindOfClass:[JxCoreDataPredicateFilterLarger class]]){
+                    
+                    JxCoreDataPredicateFilterLarger *filterObject = (JxCoreDataPredicateFilterLarger *)filterv;
+                    NSInteger larger = [filterObject.larger integerValue];
+                    
+                    NSArray *filterParts = [filter componentsSeparatedByString:@"."];
+                    if ([filterParts count] > 1) {
+                        NSString *filterSubKeyPath = @"";
+                        NSString *filterMainKey = @"";
+                        int count = 0;
+                        for (NSString *part in filterParts) {
+                            if (count == 0) {
+                                filterMainKey = part;
+                            }else{
+                                filterSubKeyPath = [filterSubKeyPath stringByAppendingFormat:@".%@", part];
+                            }
+                            count++;
                         }
-                        count++;
+                        predicateString = [predicateString stringByAppendingFormat:@" AND ( SUBQUERY(%@, $p, $p%@ >= %d).@count > 0 ) ", filterMainKey, filterSubKeyPath, larger];
+                    }else{
+                        predicateString = [predicateString stringByAppendingFormat:@" AND ( %@ >= %d ) ", filter, larger];
                     }
-                    predicateString = [predicateString stringByAppendingFormat:@" AND ( SUBQUERY(%@, $p, $p%@ >= %d).@count > 0 ) ", filterMainKey, filterSubKeyPath, larger];
-                }else{
-                    predicateString = [predicateString stringByAppendingFormat:@" AND ( %@ >= %d ) ", filter, larger];
+                }else if([filterv isKindOfClass:[JxCoreDataPredicateFilterBool class]]){
+                    JxCoreDataPredicateFilterBool *filterObject = (JxCoreDataPredicateFilterBool *)filterv;
+                    BOOL yesOrNo = [filterObject.yesOrNo boolValue];
+                    
+                    NSArray *filterParts = [filter componentsSeparatedByString:@"."];
+                    if ([filterParts count] > 1) {
+                        NSString *filterSubKeyPath = @"";
+                        NSString *filterMainKey = @"";
+                        int count = 0;
+                        for (NSString *part in filterParts) {
+                            if (count == 0) {
+                                filterMainKey = part;
+                            }else{
+                                filterSubKeyPath = [filterSubKeyPath stringByAppendingFormat:@".%@", part];
+                            }
+                            count++;
+                        }
+                        predicateString = [predicateString stringByAppendingFormat:@" AND ( SUBQUERY(%@, $p, $p%@ >= %d).@count > 0 ) ", filterMainKey, filterSubKeyPath, yesOrNo];
+                    }else{
+                        predicateString = [predicateString stringByAppendingFormat:@" AND ( %@ = %d ) ", filter, yesOrNo];
+                    }
                 }
             }
         }
     }
+    
     
     
     if (![predicateString isEqualToString:@""]) {

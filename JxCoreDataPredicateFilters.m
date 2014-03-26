@@ -184,7 +184,6 @@
 - (NSString *)description{
     return [NSString stringWithFormat:@"%@ CONTAINS: %@ EXCLUDE %@", [super description], _contains, _exclude];
 }
-
 - (void)setContains:(NSMutableArray *)contains{
     
     if (![contains isKindOfClass:[NSMutableArray class]] && [contains isKindOfClass:[NSArray class]]) {
@@ -203,5 +202,45 @@
     _contains = [NSMutableArray array];
     _exclude = exclude;
 }
+
+@end
+
+
+
+@implementation JxCoreDataPredicateFilterBool
+
+- (id)initWithCoder:(NSCoder *)decoder {
+    self = [super initWithCoder:decoder];
+    if (!self) {
+        return nil;
+    }
+    
+    _yesOrNo = [decoder decodeObjectForKey:@"yesOrNo"];
+    
+    if (!_yesOrNo || ![_yesOrNo isKindOfClass:[NSNumber class]]) {
+        _yesOrNo = @(NO);
+    }
+    
+    return self;
+}
+- (void)encodeWithCoder:(NSCoder *)encoder {
+    [super encodeWithCoder:encoder];
+    [encoder encodeObject:_yesOrNo forKey:@"yesOrNo"];
+}
+- (id)initWithKey:(NSString *)key{
+    if ((self = [super init])) {
+        self.key = key;
+        _yesOrNo = @(NO);
+    }
+    return self;
+}
+- (NSString *)description{
+    return [NSString stringWithFormat:@"%@ BOOL: %d YES or NO", [super description], [_yesOrNo boolValue]];
+}
+- (void)setYesOrNo:(NSNumber *)yesOrNo{
+    
+    _yesOrNo = yesOrNo;
+}
+
 @end
 
