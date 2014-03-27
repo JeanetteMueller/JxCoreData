@@ -60,12 +60,13 @@
 
     DLog(@"namespace: %@", namespace);
     
-    _namespace = namespace;
-    _dataFilter = [NSMutableArray array];
-    _dataFiltervalues = [NSMutableDictionary dictionary];
-    
-    [self loadFilter];
-
+    if (![_namespace isEqualToString:namespace]) {
+        _namespace = namespace;
+        _dataFilter = [NSMutableArray array];
+        _dataFiltervalues = [NSMutableDictionary dictionary];
+        
+        [self loadFilter];
+    }
 }
 - (void)loadPropertyConfig{
     NSArray *paths = NSSearchPathForDirectoriesInDomains (NSDocumentDirectory, NSUserDomainMask, YES);
