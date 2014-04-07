@@ -11,11 +11,10 @@
 
 @interface JxFetchResultTableViewController : JxFetchResultViewController <UITableViewDataSource, UITableViewDelegate>
 
+@property (strong, nonatomic) IBOutlet UITableView *tableView;
 @property (nonatomic, readwrite) int page;
 @property (nonatomic, readwrite) BOOL lastPageReached;
 @property (nonatomic, readwrite) BOOL dynamicUpdate;
-
-- (UITableView *)tableView;
 
 - (void)configureCell:(UITableViewCell *)cell atIndexPath:(NSIndexPath *)indexPath;
 - (void)startCell:(UITableViewCell *)cell atIndexPath:(NSIndexPath *)indexPath;

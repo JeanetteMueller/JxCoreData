@@ -13,9 +13,7 @@
 
 @implementation JxFetchResultTableViewController
 
-- (UITableView *)tableView{
-    return (UITableView *)self.view;
-}
+
 - (void)viewDidLoad{
     _page = 1;
     
@@ -23,14 +21,19 @@
 - (void)viewWillAppear:(BOOL)animated{
     [super viewWillAppear:animated];
     LLog();
-    [self.tableView setScrollsToTop:YES];
+    
+    if (!_tableView) {
+        NSLog(@"\n\n\nWARNING: please connect your UICollectionView with the Interface Builder to your View\n\n\n");
+    }
+    
+    [_tableView setScrollsToTop:YES];
     
     
     
 }
 - (void)viewWillDisappear:(BOOL)animated{
     LLog();
-    [self.tableView setScrollsToTop:NO];
+    [_tableView setScrollsToTop:NO];
     [super viewWillDisappear:animated];
 }
 
@@ -38,9 +41,10 @@
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
 {
-    LLog();
+    NSInteger count = [[self.fetchedResultsController sections] count];
+    DLog(@"count %d", count);
     
-    return [[self.fetchedResultsController sections] count];
+    return count;
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
@@ -97,7 +101,7 @@
             //if (newLoadedItemsCount > loadedItemsCount) {
             
             DLog(@"step 1");
-            [self.tableView beginUpdates];
+            [tableView beginUpdates];
             
             NSInteger newItemsInLastSection = [self tableView:tableView numberOfRowsInSection:sectionCount-1];
             NSInteger newSectionCount = [self numberOfSectionsInTableView:tableView];
@@ -114,7 +118,7 @@
                     i++;
                 }
                 DLog(@"insertPathes %@", insertPathes);
-                [self.tableView insertRowsAtIndexPaths:insertPathes withRowAnimation:UITableViewRowAnimationNone];
+                [tableView insertRowsAtIndexPaths:insertPathes withRowAnimation:UITableViewRowAnimationNone];
             }
             
             if (sectionCount < newSectionCount) {
@@ -126,12 +130,12 @@
                     s++;
                 }
                 DLog(@"insertSections %@", insertSections);
-                [self.tableView insertSections:insertSections withRowAnimation:UITableViewRowAnimationNone];
+                [tableView insertSections:insertSections withRowAnimation:UITableViewRowAnimationNone];
             }
             
             LLog();
             
-            [self.tableView endUpdates];
+            [tableView endUpdates];
             
         }else{
             DLog(@"step 2");
@@ -205,7 +209,7 @@
 {
     if ((self.navigationController == nil || [[self.navigationController visibleViewController] isEqual:self]) && self.dynamicUpdate) {
         LLog();
-        [self.tableView beginUpdates];
+        [_tableView beginUpdates];
     }
 
 }
@@ -215,11 +219,11 @@
         LLog();
         switch(type) {
             case NSFetchedResultsChangeInsert:
-                [self.tableView insertSections:[NSIndexSet indexSetWithIndex:sectionIndex] withRowAnimation:UITableViewRowAnimationLeft];
+                [_tableView insertSections:[NSIndexSet indexSetWithIndex:sectionIndex] withRowAnimation:UITableViewRowAnimationLeft];
                 break;
                 
             case NSFetchedResultsChangeDelete:
-                [self.tableView deleteSections:[NSIndexSet indexSetWithIndex:sectionIndex] withRowAnimation:UITableViewRowAnimationRight];
+                [_tableView deleteSections:[NSIndexSet indexSetWithIndex:sectionIndex] withRowAnimation:UITableViewRowAnimationRight];
                 break;
         }
     }
@@ -228,7 +232,7 @@
 - (void)controller:(NSFetchedResultsController *)controller didChangeObject:(id)anObject atIndexPath:(NSIndexPath *)indexPath forChangeType:(NSFetchedResultsChangeType)type newIndexPath:(NSIndexPath *)newIndexPath{
     if (( self.navigationController == nil || [[self.navigationController visibleViewController] isEqual:self]) && self.dynamicUpdate) {
         LLog();
-        UITableView *tableView = self.tableView;
+        UITableView *tableView = _tableView;
         
         switch(type) {
             case NSFetchedResultsChangeInsert:
@@ -259,10 +263,10 @@
     if (self.navigationController == nil || [[self.navigationController visibleViewController] isEqual:self]) {
         
         
-        if (self.dynamicUpdate) {
-            [self.tableView endUpdates];
+        if (_dynamicUpdate) {
+            [_tableView endUpdates];
         }else{
-            [self.tableView reloadData];
+            [_tableView reloadData];
         }
         
     }

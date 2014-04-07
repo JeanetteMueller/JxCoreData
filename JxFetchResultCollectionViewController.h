@@ -10,7 +10,7 @@
 
 @interface JxFetchResultCollectionViewController : JxFetchResultViewController <UICollectionViewDataSource, UICollectionViewDelegate>
 
-- (UICollectionView *)collectionView;
+@property (strong, nonatomic) IBOutlet UICollectionView *collectionView;
 
 - (void)configureCell:(UICollectionViewCell *)cell atIndexPath:(NSIndexPath *)indexPath;
 - (void)unloadCell:(UICollectionViewCell *)cell atIndexPath:(NSIndexPath *)indexPath;

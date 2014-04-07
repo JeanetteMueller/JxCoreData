@@ -287,8 +287,8 @@
                 }else if ([filterv isKindOfClass:[JxCoreDataPredicateFilterRange class]]) {
                     
                     JxCoreDataPredicateFilterRange *filterObject = (JxCoreDataPredicateFilterRange *)filterv;
-                    NSInteger from = [filterObject.from integerValue];
-                    NSInteger to = [filterObject.to integerValue];
+                    float from = [filterObject.from floatValue];
+                    float to = [filterObject.to floatValue];
                     
                     NSArray *filterParts = [filter componentsSeparatedByString:@"."];
                     if ([filterParts count] > 1 && useSubQuerys) {
@@ -304,18 +304,18 @@
                             count++;
                         }
                         
-                        NSString *filterFormat = [NSString stringWithFormat:@" SUBQUERY(%@, $p, $p%@ >= %%ld AND $p%@ <= %%ld).@count > 0 ", filterMainKey, filterSubKeyPath, filterSubKeyPath];
-                        [predicates addObject:[NSPredicate predicateWithFormat:filterFormat, (long)from, (long)to]];
+                        NSString *filterFormat = [NSString stringWithFormat:@" SUBQUERY(%@, $p, $p%@ >= %%f AND $p%@ <= %%f).@count > 0 ", filterMainKey, filterSubKeyPath, filterSubKeyPath];
+                        [predicates addObject:[NSPredicate predicateWithFormat:filterFormat, from, to]];
                     }else{
                         
-                        NSString *filterFormat = [NSString stringWithFormat:@" %@ BETWEEN {%%ld, %%ld} ", filter];
-                        [predicates addObject:[NSPredicate predicateWithFormat:filterFormat, (long)from, (long)to]];
+                        NSString *filterFormat = [NSString stringWithFormat:@" %@ BETWEEN {%%f, %%f} ", filter];
+                        [predicates addObject:[NSPredicate predicateWithFormat:filterFormat, from, to]];
                     }
                     
                 }else if ([filterv isKindOfClass:[JxCoreDataPredicateFilterSmaller class]]){
                     
                     JxCoreDataPredicateFilterSmaller *filterObject = (JxCoreDataPredicateFilterSmaller *)filterv;
-                    NSInteger smaller = [filterObject.smaller integerValue];
+                    float smaller = [filterObject.smaller floatValue];
                     
                     NSArray *filterParts = [filter componentsSeparatedByString:@"."];
                     if ([filterParts count] > 1) {
@@ -330,7 +330,7 @@
                             }
                             count++;
                         }
-                        NSString *filterFormat = [NSString stringWithFormat:@" SUBQUERY(%@, $p, $p%@ <= %%ld).@count > 0 ", filterMainKey, filterSubKeyPath];
+                        NSString *filterFormat = [NSString stringWithFormat:@" SUBQUERY(%@, $p, $p%@ <= %%f).@count > 0 ", filterMainKey, filterSubKeyPath];
                         [predicates addObject:[NSPredicate predicateWithFormat:filterFormat, (long)smaller]];
                     }else{
                         NSString *filterFormat = [NSString stringWithFormat:@" %@ <= %%ld ", filter];
@@ -340,7 +340,7 @@
                 }else if ([filterv isKindOfClass:[JxCoreDataPredicateFilterLarger class]]){
                     
                     JxCoreDataPredicateFilterLarger *filterObject = (JxCoreDataPredicateFilterLarger *)filterv;
-                    NSInteger larger = [filterObject.larger integerValue];
+                    float larger = [filterObject.larger floatValue];
                     
                     NSArray *filterParts = [filter componentsSeparatedByString:@"."];
                     if ([filterParts count] > 1) {
@@ -355,11 +355,11 @@
                             }
                             count++;
                         }
-                        NSString *filterFormat = [NSString stringWithFormat:@" SUBQUERY(%@, $p, $p%@ >= %%ld).@count > 0 ", filterMainKey, filterSubKeyPath];
-                        [predicates addObject:[NSPredicate predicateWithFormat:filterFormat, (long)larger]];
+                        NSString *filterFormat = [NSString stringWithFormat:@" SUBQUERY(%@, $p, $p%@ >= %%f).@count > 0 ", filterMainKey, filterSubKeyPath];
+                        [predicates addObject:[NSPredicate predicateWithFormat:filterFormat, larger]];
                     }else{
                         NSString *filterFormat = [NSString stringWithFormat:@" %@ >= %%ld ", filter];
-                        [predicates addObject:[NSPredicate predicateWithFormat:filterFormat, (long)larger]];
+                        [predicates addObject:[NSPredicate predicateWithFormat:filterFormat, larger]];
                     }
                     
                 }else if([filterv isKindOfClass:[JxCoreDataPredicateFilterBool class]]){
