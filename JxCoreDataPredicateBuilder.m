@@ -87,7 +87,7 @@
     _config = (NSDictionary *)[NSPropertyListSerialization propertyListFromData:plistXML mutabilityOption:NSPropertyListMutableContainersAndLeaves format:&format errorDescription:&errorDesc];
     if (!_config)
     {
-        DLog(@"Error reading plist: %@, format: %lu", errorDesc, format);
+        DLog(@"Error reading plist: %@, format: %u", errorDesc, format);
     }else{
         
         //DLog(@"Config Load: %@", _config);
@@ -331,10 +331,10 @@
                             count++;
                         }
                         NSString *filterFormat = [NSString stringWithFormat:@" SUBQUERY(%@, $p, $p%@ <= %%f).@count > 0 ", filterMainKey, filterSubKeyPath];
-                        [predicates addObject:[NSPredicate predicateWithFormat:filterFormat, (long)smaller]];
+                        [predicates addObject:[NSPredicate predicateWithFormat:filterFormat, smaller]];
                     }else{
-                        NSString *filterFormat = [NSString stringWithFormat:@" %@ <= %%ld ", filter];
-                        [predicates addObject:[NSPredicate predicateWithFormat:filterFormat, (long)smaller]];
+                        NSString *filterFormat = [NSString stringWithFormat:@" %@ <= %%f ", filter];
+                        [predicates addObject:[NSPredicate predicateWithFormat:filterFormat, smaller]];
                     }
                     
                 }else if ([filterv isKindOfClass:[JxCoreDataPredicateFilterLarger class]]){
@@ -358,7 +358,7 @@
                         NSString *filterFormat = [NSString stringWithFormat:@" SUBQUERY(%@, $p, $p%@ >= %%f).@count > 0 ", filterMainKey, filterSubKeyPath];
                         [predicates addObject:[NSPredicate predicateWithFormat:filterFormat, larger]];
                     }else{
-                        NSString *filterFormat = [NSString stringWithFormat:@" %@ >= %%ld ", filter];
+                        NSString *filterFormat = [NSString stringWithFormat:@" %@ >= %%f ", filter];
                         [predicates addObject:[NSPredicate predicateWithFormat:filterFormat, larger]];
                     }
                     
