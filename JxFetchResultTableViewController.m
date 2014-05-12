@@ -23,7 +23,7 @@
     LLog();
     
     if (!_tableView) {
-        NSLog(@"\n\n\nWARNING: please connect your UICollectionView with the Interface Builder to your View\n\n\n");
+        NSLog(@"\n\n\nWARNING: please connect your UITableView with the Interface Builder to this Controller\n\n\n");
     }
     
     [_tableView setScrollsToTop:YES];
