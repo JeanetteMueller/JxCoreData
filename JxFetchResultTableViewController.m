@@ -34,9 +34,12 @@
 - (void)viewWillDisappear:(BOOL)animated{
     LLog();
     [_tableView setScrollsToTop:NO];
+    
     [super viewWillDisappear:animated];
 }
-
+- (void)viewDidDisappear:(BOOL)animated{
+    [super viewDidDisappear:animated];
+}
 #pragma mark - Table view data source
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
@@ -49,8 +52,15 @@
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
-    id <NSFetchedResultsSectionInfo> sectionInfo = [self.fetchedResultsController sections][section];
-    NSInteger count = [sectionInfo numberOfObjects];
+    
+    NSArray *sections = [self.fetchedResultsController sections];
+    NSInteger count = 0;
+    
+    if ([sections count] > section) {
+        
+        id <NSFetchedResultsSectionInfo> sectionInfo = [sections objectAtIndex:section];
+        count = [sectionInfo numberOfObjects];
+    }
     
     DLog(@"count %d", count);
     return count;
@@ -154,13 +164,15 @@
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView{
     LLog();
     
-    NSLog(@"size %f", scrollView.contentSize.height);
-    
-    
-    if (scrollView.contentOffset.y+scrollView.frame.size.height > scrollView.contentSize.height-50 ) {
-        [self pagingCellFor:(UITableView *)scrollView atIndexPath:nil];
+    if ([scrollView isEqual:self.tableView]) {
+        
+        NSLog(@"size %f", scrollView.contentSize.height);
+        
+        
+        if (scrollView.contentOffset.y+scrollView.frame.size.height > scrollView.contentSize.height-50 ) {
+            [self pagingCellFor:(UITableView *)scrollView atIndexPath:nil];
+        }
     }
-    
 }
 
 
@@ -194,7 +206,7 @@
     
 }
 - (void)tableView:(UITableView *)tableView didEndDisplayingCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath{
-    
+    LLog();
     [self unloadCell:cell atIndexPath:indexPath];
     
 }
@@ -219,11 +231,11 @@
         LLog();
         switch(type) {
             case NSFetchedResultsChangeInsert:
-                [_tableView insertSections:[NSIndexSet indexSetWithIndex:sectionIndex] withRowAnimation:UITableViewRowAnimationLeft];
+                [_tableView insertSections:[NSIndexSet indexSetWithIndex:sectionIndex] withRowAnimation:UITableViewRowAnimationMiddle];
                 break;
                 
             case NSFetchedResultsChangeDelete:
-                [_tableView deleteSections:[NSIndexSet indexSetWithIndex:sectionIndex] withRowAnimation:UITableViewRowAnimationRight];
+                [_tableView deleteSections:[NSIndexSet indexSetWithIndex:sectionIndex] withRowAnimation:UITableViewRowAnimationMiddle];
                 break;
         }
     }
@@ -236,22 +248,26 @@
         
         switch(type) {
             case NSFetchedResultsChangeInsert:
-                [tableView insertRowsAtIndexPaths:@[newIndexPath] withRowAnimation:UITableViewRowAnimationLeft];
+                DLog(@"- insert");
+                [tableView insertRowsAtIndexPaths:@[newIndexPath] withRowAnimation:UITableViewRowAnimationMiddle];
                 break;
                 
             case NSFetchedResultsChangeDelete:
-                [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationRight];
+                DLog(@"- delete");
+                [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationMiddle];
                 break;
                 
             case NSFetchedResultsChangeUpdate:
+                DLog(@"- update");
                 [self configureCell:[tableView cellForRowAtIndexPath:indexPath] atIndexPath:indexPath];
                 
                 [self startCell:[tableView cellForRowAtIndexPath:indexPath] atIndexPath:indexPath];
                 break;
                 
             case NSFetchedResultsChangeMove:
-                [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
-                [tableView insertRowsAtIndexPaths:@[newIndexPath] withRowAnimation:UITableViewRowAnimationFade];
+                DLog(@"- move");
+                [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationMiddle];
+                [tableView insertRowsAtIndexPaths:@[newIndexPath] withRowAnimation:UITableViewRowAnimationMiddle];
                 break;
         }
     }
@@ -262,8 +278,9 @@
     LLog();
     if (self.navigationController == nil || [[self.navigationController visibleViewController] isEqual:self]) {
         
-        
+        DLog(@"dynamicUpdate: %d", _dynamicUpdate);
         if (_dynamicUpdate) {
+            
             [_tableView endUpdates];
         }else{
             [_tableView reloadData];

@@ -36,8 +36,18 @@
     LLog();
 }
 - (void)viewWillDisappear:(BOOL)animated{
-    //LLog();
+    LLog();
     [super viewWillDisappear:animated];
+}
+- (void)viewDidDisappear:(BOOL)animated{
+    LLog();
+    
+    _fetchedResultsController = nil;
+    
+    [super viewDidDisappear:animated];
+}
+- (void)dealloc{
+    _managedObjectContext = nil;
 }
 
 #pragma mark - Fetched results controller
@@ -50,6 +60,9 @@
         if (![self.fetchedResultsController performFetch:&error]) {
             NSLog(@"Error %@: %@", error, error.description);
         };
+        
+        
+        NSLog(@"fetchedObjects %@", self.fetchedResultsController.fetchedObjects);
 
     }
     @catch (NSException *exception) {

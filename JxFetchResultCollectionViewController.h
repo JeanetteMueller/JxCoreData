@@ -8,7 +8,7 @@
 
 #import "JxFetchResultViewController.h"
 
-@interface JxFetchResultCollectionViewController : JxFetchResultViewController <UICollectionViewDataSource, UICollectionViewDelegate>
+@interface JxFetchResultCollectionViewController : JxFetchResultViewController <UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout>
 
 @property (strong, nonatomic) IBOutlet UICollectionView *collectionView;
 

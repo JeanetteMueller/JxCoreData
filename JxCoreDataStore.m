@@ -137,9 +137,11 @@
 }
 - (NSManagedObjectContext *)mainManagedObjectContext{
     if (_mainManagedObjectContext != nil) {
+        
+        DLog(@"return old mainManagedObjectContext");
         return _mainManagedObjectContext;
     }
-    DLog(@"create new mainManagedObjectContext");
+    
     _mainManagedObjectContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
     _mainManagedObjectContext.persistentStoreCoordinator = [self persistentStoreCoordinator];
     

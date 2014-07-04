@@ -138,8 +138,8 @@
 - (void)saveFilter{
     LLog();
     
-//    DLog(@"save filter %@", _dataFilter);
-//    DLog(@"save values %@", _dataFiltervalues);
+//    NSLog(@"save filter %@", _dataFilter);
+//    NSLog(@"save values %@", _dataFiltervalues);
     
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     
@@ -148,8 +148,8 @@
     
     [defaults synchronize];
     
-    DLog(@"saved filter %@", [defaults objectForKey:[NSString stringWithFormat:@"filter%@", _namespace]]);
-    DLog(@"saved values %@", [NSKeyedUnarchiver unarchiveObjectWithData:[defaults objectForKey:[NSString stringWithFormat:@"filtervalues%@", _namespace]]]);
+    NSLog(@"saved filter %@", [defaults objectForKey:[NSString stringWithFormat:@"filter%@", _namespace]]);
+    NSLog(@"saved values %@", [NSKeyedUnarchiver unarchiveObjectWithData:[defaults objectForKey:[NSString stringWithFormat:@"filtervalues%@", _namespace]]]);
     
     
     [[NSNotificationCenter defaultCenter] postNotificationName:kJxCoreDataPredicateDidChange object:nil];
@@ -220,6 +220,9 @@
     
 }
 - (JxCoreDataPredicateFilter *)getFilterValueFromFilter:(NSString *)filterName{
+    
+    DLog(@"_dataFiltervalues: %@", _dataFiltervalues);
+    
     return [_dataFiltervalues objectForKey:filterName];
 }
 

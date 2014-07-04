@@ -22,4 +22,8 @@
 
 - (void)reachedLastElement;
 
+
+
+- (void)controllerDidChangeContent:(NSFetchedResultsController *)controller;
+
 @end
