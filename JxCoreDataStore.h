@@ -19,6 +19,7 @@
 
 - (void)saveContext;
 - (void)flushStore;
+- (void)deleteAllObjects:(NSString *)entityDescription;
 
 - (NSString *)getDBFileName;
 

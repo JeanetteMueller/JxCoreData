@@ -46,17 +46,52 @@
     }
 }
 - (void)flushStore{
-    NSPersistentStore *store = self.persistentStoreCoordinator.persistentStores[0];
+    
+    NSPersistentStoreCoordinator *storeCoordinator = [self persistentStoreCoordinator];
+    NSPersistentStore *store = [[storeCoordinator persistentStores] lastObject];
+    
     NSError *error;
     NSURL *storeURL = store.URL;
-    NSPersistentStoreCoordinator *storeCoordinator = self.persistentStoreCoordinator;
+
     [storeCoordinator removePersistentStore:store error:&error];
     [[NSFileManager defaultManager] removeItemAtPath:storeURL.path error:&error];
     
-    _persistentStoreCoordinator = nil;
-    _mainManagedObjectContext = nil;
-    _managedObjectModel = nil;
+    [_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeURL options:nil error:&error];
     
+    if (storeCoordinator != nil) {
+        _mainManagedObjectContext = nil;
+    }
+    
+}
+- (void)deleteAllObjects:(NSString *)entityDescription{
+    LLog();
+    NSManagedObjectContext *privateContext = [self newPrivateContext];
+    
+    
+    NSFetchRequest* fetchRequest = [NSFetchRequest fetchRequestWithEntityName:entityDescription];
+    
+    NSEntityDescription* entity = [NSEntityDescription entityForName:entityDescription inManagedObjectContext:privateContext];
+    
+    [fetchRequest setEntity:entity];
+    
+    LLog();
+    
+    NSError *error = nil;
+    
+    NSArray *resultsAll;
+    
+    if ((resultsAll = [privateContext executeFetchRequest:fetchRequest error:&error])) {
+        LLog();
+        
+    
+        for (NSManagedObject *managedObject in resultsAll) {
+            [privateContext deleteObject:managedObject];
+            DLog(@"%@ object deleted",entityDescription);
+        }
+        if (![privateContext save:&error]) {
+            DLog(@"Error deleting %@ - error:%@",entityDescription,error);
+        }
+    }
 }
 - (BOOL)replaceCurrentSQLiteDBWithNewDB:(NSURL *)pathToNewDBFile{
     DLog(@"newDB %@", pathToNewDBFile);

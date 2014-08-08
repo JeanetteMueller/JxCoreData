@@ -241,7 +241,7 @@
             
             id filterv = [_dataFiltervalues objectForKey:filter];
             
-            NSLog(@"filterv %@", filterv);
+            //NSLog(@"filterv %@", filterv);
             
             if ([[filterv class] isSubclassOfClass:[JxCoreDataPredicateFilter class]]) {
                 

@@ -62,7 +62,7 @@
         };
         
         
-        NSLog(@"fetchedObjects %@", self.fetchedResultsController.fetchedObjects);
+        //NSLog(@"fetchedObjects %@", self.fetchedResultsController.fetchedObjects);
 
     }
     @catch (NSException *exception) {
