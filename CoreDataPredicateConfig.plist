@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>filterkey_1</key>
+	<dict>
+		<key>filterSelector</key>
+		<string>picker</string>
+		<key>image</key>
+		<string>icon_filterkey_1</string>
+		<key>from</key>
+		<integer>200</integer>
+		<key>to</key>
+		<real>3000</real>
+		<key>step</key>
+		<integer>100</integer>
+	</dict>
+	<key>filterkey_2</key>
+	<dict>
+		<key>filterSelector</key>
+		<string>picker</string>
+		<key>image</key>
+		<string>icon_filterkey_2</string>
+		<key>from</key>
+		<integer>0</integer>
+		<key>to</key>
+		<real>1000</real>
+		<key>step</key>
+		<integer>10</integer>
+	</dict>
+	<key>filterkey_3</key>
+	<dict>
+		<key>filterSelector</key>
+		<string>list</string>
+		<key>filterGetFunction</key>
+		<string>getAllKindOf_filtertype_3</string>
+		<key>image</key>
+		<string>icon_filterkey_3</string>
+	</dict>
+</dict>
+</plist>
