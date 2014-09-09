@@ -202,16 +202,16 @@
 
 }
 - (void)startCell:(UITableViewCell *)cell atIndexPath:(NSIndexPath *)indexPath{
-    LLog();
+
     
 }
 - (void)tableView:(UITableView *)tableView didEndDisplayingCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath{
-    LLog();
+
     [self unloadCell:cell atIndexPath:indexPath];
     
 }
 - (void)unloadCell:(UITableViewCell *)cell atIndexPath:(NSIndexPath *)indexPath{
-    LLog();
+
     
     [[NSNotificationCenter defaultCenter] removeObserver:cell];
 }
@@ -220,7 +220,7 @@
 - (void)controllerWillChangeContent:(NSFetchedResultsController *)controller
 {
     if ((self.navigationController == nil || [[self.navigationController visibleViewController] isEqual:self]) && self.dynamicUpdate) {
-        LLog();
+
         [_tableView beginUpdates];
     }
 
@@ -228,7 +228,7 @@
 
 - (void)controller:(NSFetchedResultsController *)controller didChangeSection:(id <NSFetchedResultsSectionInfo>)sectionInfo atIndex:(NSUInteger)sectionIndex forChangeType:(NSFetchedResultsChangeType)type{
     if ((self.navigationController == nil || [[self.navigationController visibleViewController] isEqual:self] ) && self.dynamicUpdate) {
-        LLog();
+
         switch(type) {
             case NSFetchedResultsChangeInsert:
                 [_tableView insertSections:[NSIndexSet indexSetWithIndex:sectionIndex] withRowAnimation:UITableViewRowAnimationMiddle];
@@ -243,29 +243,29 @@
 
 - (void)controller:(NSFetchedResultsController *)controller didChangeObject:(id)anObject atIndexPath:(NSIndexPath *)indexPath forChangeType:(NSFetchedResultsChangeType)type newIndexPath:(NSIndexPath *)newIndexPath{
     if (( self.navigationController == nil || [[self.navigationController visibleViewController] isEqual:self]) && self.dynamicUpdate) {
-        LLog();
+
         UITableView *tableView = _tableView;
         
         switch(type) {
             case NSFetchedResultsChangeInsert:
-                DLog(@"- insert");
+
                 [tableView insertRowsAtIndexPaths:@[newIndexPath] withRowAnimation:UITableViewRowAnimationMiddle];
                 break;
                 
             case NSFetchedResultsChangeDelete:
-                DLog(@"- delete");
+
                 [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationMiddle];
                 break;
                 
             case NSFetchedResultsChangeUpdate:
-                DLog(@"- update");
+
                 [self configureCell:[tableView cellForRowAtIndexPath:indexPath] atIndexPath:indexPath];
                 
                 [self startCell:[tableView cellForRowAtIndexPath:indexPath] atIndexPath:indexPath];
                 break;
                 
             case NSFetchedResultsChangeMove:
-                DLog(@"- move");
+
                 [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationMiddle];
                 [tableView insertRowsAtIndexPaths:@[newIndexPath] withRowAnimation:UITableViewRowAnimationMiddle];
                 break;

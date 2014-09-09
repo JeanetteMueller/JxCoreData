@@ -13,7 +13,10 @@
 
 @property (nonatomic,strong,readonly) NSManagedObjectContext* mainManagedObjectContext;
 
-- (id)initWithStoreName:(NSString *)storeName;
+- (id)initWithStoreName:(NSString *)storeName andTeamID:(NSString *)teamID;
+
+- (void)setiCloudSyncAllowed:(BOOL)allowedSync;
+- (BOOL)iCloudSyncAllowed;
 
 - (NSManagedObjectContext*)newPrivateContext;
 

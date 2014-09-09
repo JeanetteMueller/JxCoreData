@@ -89,9 +89,9 @@
     fetchRequest.returnsObjectsAsFaults = NO;
     [fetchRequest setFetchLimit:[self.fetchLimit intValue]];
     
-    NSLog(@"fetchRequest %@", fetchRequest);
-    NSLog(@"managedObjectContext %@", self.managedObjectContext);
-    NSLog(@"sectionKeyPath %@", self.sectionKeyPath);
+//    NSLog(@"fetchRequest %@", fetchRequest);
+//    NSLog(@"managedObjectContext %@", self.managedObjectContext);
+//    NSLog(@"sectionKeyPath %@", self.sectionKeyPath);
     LLog();
     NSFetchedResultsController *aFetchedResultsController = [[NSFetchedResultsController alloc] initWithFetchRequest:fetchRequest
                                                                                                 managedObjectContext:self.managedObjectContext

@@ -7,9 +7,12 @@
 #import "JxCoreDataStore.h"
 #import "Logging.h"
 
+#define kAllowedSync @"allowedSync"
+
 @interface JxCoreDataStore ()
 
 @property (nonatomic,strong) NSString *name;
+@property (nonatomic,strong) NSString *teamID;
 @property (nonatomic,strong,readwrite) NSManagedObjectContext* mainManagedObjectContext;
 @property (nonatomic,strong) NSManagedObjectModel* managedObjectModel;
 @property (nonatomic,strong) NSPersistentStoreCoordinator* persistentStoreCoordinator;
@@ -19,15 +22,41 @@
 @implementation JxCoreDataStore
 
 #pragma mark - Public Functions
-- (id)initWithStoreName:(NSString *)storeName{
+- (id)initWithStoreName:(NSString *)storeName andTeamID:(NSString *)teamID{
     self = [super init];
     if (self) {
         _name = storeName;
+        _teamID = teamID;
         [self setupSaveNotification];
     }
-
+    
     return self;
 }
+- (void)setiCloudSyncAllowed:(BOOL)allowedSync{
+    
+    if ([self iCloudSyncAllowed] != allowedSync) {
+        self.persistentStoreCoordinator = nil;
+        self.mainManagedObjectContext = nil;
+    }
+    
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    
+    [defaults setBool:allowedSync forKey:kAllowedSync];
+    
+    [defaults synchronize];
+}
+
+- (BOOL)iCloudSyncAllowed{
+    
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    
+    BOOL allowed = [defaults boolForKey:kAllowedSync];
+    
+    DLog(@"allowed %d", allowed);
+    
+    return allowed;
+}
+
 - (NSManagedObjectContext*)newPrivateContext{
     NSManagedObjectContext* context = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
     context.persistentStoreCoordinator = self.persistentStoreCoordinator;
@@ -52,7 +81,7 @@
     
     NSError *error;
     NSURL *storeURL = store.URL;
-
+    
     [storeCoordinator removePersistentStore:store error:&error];
     [[NSFileManager defaultManager] removeItemAtPath:storeURL.path error:&error];
     
@@ -83,7 +112,7 @@
     if ((resultsAll = [privateContext executeFetchRequest:fetchRequest error:&error])) {
         LLog();
         
-    
+        
         for (NSManagedObject *managedObject in resultsAll) {
             [privateContext deleteObject:managedObject];
             DLog(@"%@ object deleted",entityDescription);
@@ -228,9 +257,9 @@
     NSURL *storeURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:[self getDBFileName]];
     
     [self copyExistingDBFileToWorkingdirectory:storeURL];
-
     
-
+    
+    
     if (![_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType
                                                    configuration:nil
                                                              URL:storeURL
@@ -242,16 +271,16 @@
         
         [[NSFileManager defaultManager] removeItemAtURL:storeURL error:&error];
         
-//        
-//        if (![_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType
-//                                                       configuration:nil
-//                                                                 URL:storeURL
-//                                                             options:[self getSQLiteOptions]
-//                                                               error:&error]) {
-//            
-//            NSLog(@"ERROR %@, %@", error, [error userInfo]);
-//        }
-
+        //
+        //        if (![_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType
+        //                                                       configuration:nil
+        //                                                                 URL:storeURL
+        //                                                             options:[self getSQLiteOptions]
+        //                                                               error:&error]) {
+        //
+        //            NSLog(@"ERROR %@, %@", error, [error userInfo]);
+        //        }
+        
     }
     
     return _persistentStoreCoordinator;
