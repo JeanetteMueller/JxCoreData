@@ -66,7 +66,7 @@
     id <NSFetchedResultsSectionInfo> sectionInfo = [self.fetchedResultsController sections][section];
     NSInteger count = [sectionInfo numberOfObjects];
     
-    DLog(@"count %d", count);
+    DLog(@"count %ld", (long)count);
     return count;
 }
 
@@ -115,6 +115,8 @@
             break;
         case NSFetchedResultsChangeDelete:
             change[@(type)] = @(sectionIndex);
+            break;
+        default:
             break;
     }
     
@@ -167,6 +169,9 @@
                             break;
                         case NSFetchedResultsChangeUpdate:
                             [_collectionView reloadSections:[NSIndexSet indexSetWithIndex:[obj unsignedIntegerValue]]];
+                            break;
+                        default:
+                            
                             break;
                     }
                 }];

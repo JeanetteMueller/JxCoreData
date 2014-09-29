@@ -17,6 +17,7 @@
 - (void)viewDidLoad{
     _page = 1;
     
+    [super viewDidLoad];
 }
 - (void)viewWillAppear:(BOOL)animated{
     [super viewWillAppear:animated];
@@ -45,7 +46,7 @@
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
 {
     NSInteger count = [[self.fetchedResultsController sections] count];
-    DLog(@"count %d", count);
+    DLog(@"count %ld", (long)count);
     
     return count;
 }
@@ -62,7 +63,7 @@
         count = [sectionInfo numberOfObjects];
     }
     
-    DLog(@"count %d", count);
+    DLog(@"count %ld", (long)count);
     return count;
 }
 
@@ -120,7 +121,7 @@
             
             if (itemsInLastSection < newItemsInLastSection) {
                 
-                int i = itemsInLastSection;
+                NSInteger i = itemsInLastSection;
                 NSMutableArray *insertPathes = [NSMutableArray array];
                 
                 while (i < newItemsInLastSection) {
@@ -133,7 +134,7 @@
             
             if (sectionCount < newSectionCount) {
                 
-                int s = sectionCount;
+                NSInteger s = sectionCount;
                 NSMutableIndexSet *insertSections = [NSMutableIndexSet indexSet];
                 while (s < newSectionCount) {
                     [insertSections addIndex:s];
@@ -236,6 +237,9 @@
                 
             case NSFetchedResultsChangeDelete:
                 [_tableView deleteSections:[NSIndexSet indexSetWithIndex:sectionIndex] withRowAnimation:UITableViewRowAnimationMiddle];
+                break;
+            default:
+                
                 break;
         }
     }
