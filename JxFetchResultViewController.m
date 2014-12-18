@@ -51,31 +51,30 @@
 }
 
 #pragma mark - Fetched results controller
-
-- (void)refetchData {
+- (void)refetchData{
     LLog();
     NSError *error;
     
-    @try {        
+    @try {
+        
         if (![self.fetchedResultsController performFetch:&error]) {
             NSLog(@"Error %@: %@", error, error.description);
         };
         
-        
         //NSLog(@"fetchedObjects %@", self.fetchedResultsController.fetchedObjects);
-
+        
     }
     @catch (NSException *exception) {
         NSLog(@"Exception %@: %@", exception.name, exception.reason);
     }
-  
+    
 }
 - (NSFetchedResultsController *)fetchedResultsController{
     
     if (_fetchedResultsController != nil) {
         return _fetchedResultsController;
     }
-    DLog(@"self.entityName: %@", self.entityName);
+    //DLog(@"self.entityName: %@", self.entityName);
     
     NSFetchRequest *fetchRequest = [NSFetchRequest fetchRequestWithEntityName:self.entityName];
     fetchRequest.resultType = NSManagedObjectResultType;
@@ -89,28 +88,15 @@
     fetchRequest.returnsObjectsAsFaults = NO;
     [fetchRequest setFetchLimit:[self.fetchLimit intValue]];
     
-//    NSLog(@"fetchRequest %@", fetchRequest);
-//    NSLog(@"managedObjectContext %@", self.managedObjectContext);
-//    NSLog(@"sectionKeyPath %@", self.sectionKeyPath);
-    LLog();
     NSFetchedResultsController *aFetchedResultsController = [[NSFetchedResultsController alloc] initWithFetchRequest:fetchRequest
                                                                                                 managedObjectContext:self.managedObjectContext
                                                                                                   sectionNameKeyPath:self.sectionKeyPath
                                                                                                            cacheName:nil];
     
-    LLog();
+
     aFetchedResultsController.delegate = self;
     self.fetchedResultsController = aFetchedResultsController;
-    
-    LLog();
-    
-//    NSError *error = nil;
-//	if (![self.fetchedResultsController performFetch:&error]) {
-//        // Replace this implementation with code to handle the error appropriately.
-//        // abort() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-//	    NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
-//	    abort();
-//	}
+
     
     NSLog(@"return _fetchedResultsController");
     return _fetchedResultsController;

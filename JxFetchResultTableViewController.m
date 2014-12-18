@@ -41,6 +41,7 @@
 - (void)viewDidDisappear:(BOOL)animated{
     [super viewDidDisappear:animated];
 }
+
 #pragma mark - Table view data source
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
@@ -106,7 +107,7 @@
             
             [self.fetchedResultsController.fetchRequest setFetchLimit:oldLimit+[self.fetchLimit intValue]];
             [self refetchData];
-            
+
             //int newLoadedItemsCount = [self.fetchedResultsController.fetchedObjects count];
             
             //if (newLoadedItemsCount > loadedItemsCount) {
@@ -148,6 +149,7 @@
             
             [tableView endUpdates];
             
+        
         }else{
             DLog(@"step 2");
             _lastPageReached = YES;
@@ -228,14 +230,19 @@
 }
 
 - (void)controller:(NSFetchedResultsController *)controller didChangeSection:(id <NSFetchedResultsSectionInfo>)sectionInfo atIndex:(NSUInteger)sectionIndex forChangeType:(NSFetchedResultsChangeType)type{
+    
     if ((self.navigationController == nil || [[self.navigationController visibleViewController] isEqual:self] ) && self.dynamicUpdate) {
-
+        
+        LLog();
         switch(type) {
             case NSFetchedResultsChangeInsert:
                 [_tableView insertSections:[NSIndexSet indexSetWithIndex:sectionIndex] withRowAnimation:UITableViewRowAnimationMiddle];
                 break;
                 
             case NSFetchedResultsChangeDelete:
+                
+                
+                
                 [_tableView deleteSections:[NSIndexSet indexSetWithIndex:sectionIndex] withRowAnimation:UITableViewRowAnimationMiddle];
                 break;
             default:
@@ -247,32 +254,42 @@
 
 - (void)controller:(NSFetchedResultsController *)controller didChangeObject:(id)anObject atIndexPath:(NSIndexPath *)indexPath forChangeType:(NSFetchedResultsChangeType)type newIndexPath:(NSIndexPath *)newIndexPath{
     if (( self.navigationController == nil || [[self.navigationController visibleViewController] isEqual:self]) && self.dynamicUpdate) {
-
+        
+        LLog();
         UITableView *tableView = _tableView;
         
         switch(type) {
-            case NSFetchedResultsChangeInsert:
+            case NSFetchedResultsChangeInsert:{
 
                 [tableView insertRowsAtIndexPaths:@[newIndexPath] withRowAnimation:UITableViewRowAnimationMiddle];
-                break;
+            }break;
                 
-            case NSFetchedResultsChangeDelete:
-
+            case NSFetchedResultsChangeDelete:{
+                
+                UITableViewCell *cell = [tableView cellForRowAtIndexPath:indexPath];
+                
+                [[NSNotificationCenter defaultCenter] removeObserver:cell];
+                
                 [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationMiddle];
-                break;
+            }break;
                 
-            case NSFetchedResultsChangeUpdate:
-
+            case NSFetchedResultsChangeUpdate:{
+                
+                UITableViewCell *cell = [tableView cellForRowAtIndexPath:indexPath];
+                
+                [[NSNotificationCenter defaultCenter] removeObserver:cell];
+                
+                
                 [self configureCell:[tableView cellForRowAtIndexPath:indexPath] atIndexPath:indexPath];
                 
                 [self startCell:[tableView cellForRowAtIndexPath:indexPath] atIndexPath:indexPath];
-                break;
+            }break;
                 
-            case NSFetchedResultsChangeMove:
+            case NSFetchedResultsChangeMove:{
 
                 [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationMiddle];
                 [tableView insertRowsAtIndexPaths:@[newIndexPath] withRowAnimation:UITableViewRowAnimationMiddle];
-                break;
+            }break;
         }
     }
 }
@@ -287,6 +304,7 @@
             
             [_tableView endUpdates];
         }else{
+            LLog();
             [_tableView reloadData];
         }
         

@@ -18,6 +18,7 @@
 - (void)setiCloudSyncAllowed:(BOOL)allowedSync;
 - (BOOL)iCloudSyncAllowed;
 
+- (NSManagedObjectContext *)mainManagedObjectContext;
 - (NSManagedObjectContext*)newPrivateContext;
 
 - (void)saveContext;
@@ -26,6 +27,10 @@
 
 - (NSString *)getDBFileName;
 
+- (NSPersistentStoreCoordinator *)persistentStoreCoordinator;
+
 - (BOOL)replaceCurrentSQLiteDBWithNewDB:(NSURL *)pathToNewDBFile;
+
+- (NSURL *)getURIPrepresentationForID:(NSString *)idString andEntityName:(NSString *)entityName;
 
 @end

@@ -27,7 +27,7 @@
     if (self) {
         _name = storeName;
         _teamID = teamID;
-        [self setupSaveNotification];
+        [self setupNotifications];
     }
     
     return self;
@@ -66,12 +66,16 @@
     NSError *error = nil;
     NSManagedObjectContext *managedObjectContext = self.mainManagedObjectContext;
     if (managedObjectContext != nil) {
-        if ([managedObjectContext hasChanges] && ![managedObjectContext save:&error]) {
-            // Replace this implementation with code to handle the error appropriately.
-            // abort() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-            NSLog(@"ERROR %@, %@", error, [error userInfo]);
-            abort();
+        if ([managedObjectContext hasChanges]){
+            DLog(@"SAVE------------------");
+            if (![managedObjectContext save:&error]) {
+                // Replace this implementation with code to handle the error appropriately.
+                // abort() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
+                NSLog(@"ERROR %@, %@", error, [error userInfo]);
+                abort();
+            }
         }
+        
     }
 }
 - (void)flushStore{
@@ -117,6 +121,7 @@
             [privateContext deleteObject:managedObject];
             DLog(@"%@ object deleted",entityDescription);
         }
+        DLog(@"SAVE------------------");
         if (![privateContext save:&error]) {
             DLog(@"Error deleting %@ - error:%@",entityDescription,error);
         }
@@ -172,7 +177,7 @@
     return YES;
 }
 #pragma mark - Private Methods
-- (void)setupSaveNotification{
+- (void)setupNotifications{
     [[NSNotificationCenter defaultCenter] addObserverForName:NSManagedObjectContextDidSaveNotification
                                                       object:nil
                                                        queue:nil
@@ -189,6 +194,9 @@
                                                               moc.persistentStoreCoordinator == [self persistentStoreCoordinator]
                                                               ) {
                                                               
+//                                                              DLog(@"note.object: %@", note.object);
+//                                                              DLog(@"note.userInfo: %@", note.userInfo);
+                                                              
                                                               [moc performBlock:^(){
                                                                   [moc mergeChangesFromContextDidSaveNotification:note];
                                                                   [[NSNotificationCenter defaultCenter] postNotificationName:kStoreDidChangeNotification object:nil];
@@ -198,14 +206,42 @@
                                                       
                                                   }];
     
+
+    [[NSNotificationCenter defaultCenter] addObserverForName:NSManagedObjectContextObjectsDidChangeNotification
+                                                      object:nil
+                                                       queue:nil
+                                                  usingBlock:^(NSNotification *notification) {
+                                                      
+//                                                      NSArray* insertedObjects = [[notification userInfo] objectForKey:NSInsertedObjectsKey] ;
+//                                                      NSArray* deletedObjects = [[notification userInfo] objectForKey:NSDeletedObjectsKey] ;
+//                                                      NSArray* updatedObjects = [[notification userInfo] objectForKey:NSUpdatedObjectsKey] ;
+//                                                      DLog(@"insertObjects: %@", [insertedObjects description]);
+//                                                      DLog(@"deletedObjects: %@", [deletedObjects description]);
+//                                                      DLog(@"updatedObjects: %@", [updatedObjects description]);
+                                                      
+                                                      
+                                                  }];
+
 }
+
 - (NSManagedObjectContext *)mainManagedObjectContext{
     if (_mainManagedObjectContext != nil) {
     
         return _mainManagedObjectContext;
     }
     
-    _mainManagedObjectContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
+    if (![NSThread currentThread].isMainThread) {
+        
+        dispatch_sync(dispatch_get_main_queue(), ^{
+            (void)[self mainManagedObjectContext];
+        });
+        
+        DLog(@"return after init");
+        return _mainManagedObjectContext;
+    }
+    
+    
+    self.mainManagedObjectContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
     _mainManagedObjectContext.persistentStoreCoordinator = [self persistentStoreCoordinator];
     
     return _mainManagedObjectContext;
@@ -217,6 +253,31 @@
     
     NSURL *modelURL = [[NSBundle mainBundle] URLForResource:_name withExtension:@"momd"];
     _managedObjectModel = [[NSManagedObjectModel alloc] initWithContentsOfURL:modelURL];
+    
+    
+//    NSMappingModel *mappingModel = [[NSMappingModel alloc] initWithContentsOfURL:modelURL];
+//    
+//    NSArray *newEntityMappings = [NSArray arrayWithArray:mappingModel.entityMappings];
+//    for (NSEntityMapping *entityMapping in newEntityMappings) {
+//        
+//        [entityMapping setSourceEntityVersionHash:[sourceModel.entityVersionHashesByName valueForKey:entityMapping.sourceEntityName]];
+//        [entityMapping setDestinationEntityVersionHash:[destinationModel.entityVersionHashesByName valueForKey:entityMapping.destinationEntityName]];
+//    }
+//    mappingModel.entityMappings = newEntityMappings;
+//    
+//    BOOL ok = [migrationManager migrateStoreFromURL:sourceStoreURL
+//                                               type:sourceStoreType
+//                                            options:nil
+//                                   withMappingModel:mappingModel
+//                                   toDestinationURL:destinationStoreURL
+//                                    destinationType:destinationStoreType
+//                                 destinationOptions:nil
+//                                              error:&error];
+//    
+//    _managedObjectModel = mappingModel;
+    
+    
+    
     return _managedObjectModel;
 }
 - (NSDictionary *)getSQLiteOptions{
@@ -232,7 +293,7 @@
 - (NSPersistentStoreCoordinator *)persistentStoreCoordinator{
     
     if (_persistentStoreCoordinator != nil) {
-        DLog(@"direct return");
+        //DLog(@"direct return");
         return _persistentStoreCoordinator;
     }
     
@@ -324,4 +385,25 @@
     NSLog(@"ERROR %@, %@", error, [error userInfo]);
     return NO;
 }
+
+- (NSURL *)getURIPrepresentationForID:(NSString *)idString andEntityName:(NSString *)entityName{
+    
+    NSPersistentStoreCoordinator *storeCoordinator = [self persistentStoreCoordinator];
+    
+    NSDictionary *metaData = [storeCoordinator metadataForPersistentStore:[[storeCoordinator persistentStores] firstObject]];
+
+    //DLog(@"SQLITE UUID %@", [metaData objectForKey:NSStoreUUIDKey]);
+    
+    NSString *urlString = [NSString stringWithFormat:@"x-coredata://%@/%@/%@", [metaData objectForKey:NSStoreUUIDKey], entityName, idString];
+    
+    //DLog(@"urlString: %@", urlString);
+    
+    NSURL *url = [NSURL URLWithString:urlString];
+    
+    //DLog(@"url: %@", url);
+    
+    return url;
+}
+     
+     
 @end

@@ -87,7 +87,7 @@
     _config = (NSDictionary *)[NSPropertyListSerialization propertyListFromData:plistXML mutabilityOption:NSPropertyListMutableContainersAndLeaves format:&format errorDescription:&errorDesc];
     if (!_config)
     {
-        DLog(@"Error reading plist: %@, format: %u", errorDesc, format);
+        DLog(@"Error reading plist: %@, format: %lu", errorDesc, format);
     }else{
         
         //DLog(@"Config Load: %@", _config);
