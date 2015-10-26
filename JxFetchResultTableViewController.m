@@ -7,21 +7,107 @@
 #import "JxFetchResultTableViewController.h"
 #import "Logging.h"
 
+@interface SVPullToRefreshView ()
+
+@property (nonatomic, copy) void (^pullToRefreshActionHandler)(void);
+
+@end
+
+@interface SVInfiniteScrollingView ()
+
+@property (nonatomic, copy) void (^infiniteScrollingHandler)(void);
+
+@end
+
+static const int kLoadingCellTag = 257;
+
+
 @interface JxFetchResultTableViewController ()
+
+@property (nonatomic, assign) BOOL isCountingRows;
+@property (nonatomic, assign) BOOL hasAddedPullToRefreshControl;
+
+// Loading
+
+- (void) _loadFirstPage;
+- (void) _loadNextPage;
+
+- (void) _loadFromPullToRefresh;
+
+// Table View Cells & NSIndexPaths
+
+- (UITableViewCell *) _cellForLoadingCell;
+- (BOOL) _indexRepresentsLastSection:(NSInteger)section;
+- (BOOL) _indexPathRepresentsLastRow:(NSIndexPath *)indexPath;
+- (NSInteger) _totalNumberOfRows;
+- (CGFloat) _cumulativeHeightForCellsAtIndexPaths:(NSArray *)indexPaths;
 
 @end
 
 @implementation JxFetchResultTableViewController
 
+- (void) loadView {
+    [super loadView];
+    
+    self.loadingView = [[JMStatefulTableViewLoadingView alloc] initWithFrame:self.tableView.bounds];
+    self.loadingView.backgroundColor = [UIColor clearColor];
+    self.errorView = [[JMStatefulTableViewErrorView alloc] initWithFrame:self.tableView.bounds];
+    self.errorView.backgroundColor = [[UIColor redColor] colorWithAlphaComponent:0.5];
+    
+    self.hasAddedPullToRefreshControl = NO;
+}
 
 - (void)viewDidLoad{
     _page = 1;
     
     [super viewDidLoad];
 }
-- (void)viewWillAppear:(BOOL)animated{
-    [super viewWillAppear:animated];
+
+- (void)viewWillDisappear:(BOOL)animated{
     LLog();
+    [_tableView setScrollsToTop:NO];
+    
+    [super viewWillDisappear:animated];
+}
+- (void) viewDidUnload {
+    [super viewDidUnload];
+    
+    self.loadingView = nil;
+    self.errorView = nil;
+}
+
+- (void) viewWillAppear:(BOOL)animated {
+    
+    __block __typeof(self)safeSelf = self;
+    
+    BOOL shouldPullToRefresh = YES;
+    if([self.statefulDelegate respondsToSelector:@selector(statefulTableViewControllerShouldPullToRefresh:)]) {
+        shouldPullToRefresh = [self.statefulDelegate statefulTableViewControllerShouldPullToRefresh:self];
+    }
+    
+    if(!self.hasAddedPullToRefreshControl && shouldPullToRefresh) {
+        if([self respondsToSelector:@selector(refreshControl)]) {
+            //self.refreshControl = [[UIRefreshControl alloc] init];
+            //[self.refreshControl addTarget:self action:@selector(_loadFromPullToRefresh) forControlEvents:UIControlEventValueChanged];
+        } else {
+            [self.tableView addPullToRefreshWithActionHandler:^{
+                [safeSelf _loadFromPullToRefresh];
+            }];
+        }
+        
+        self.hasAddedPullToRefreshControl = YES;
+    }
+    
+    BOOL shouldInfinitelyScroll = YES;
+    if([self.statefulDelegate respondsToSelector:@selector(statefulTableViewControllerShouldInfinitelyScroll:)]) {
+        shouldInfinitelyScroll = [self.statefulDelegate statefulTableViewControllerShouldInfinitelyScroll:self];
+    }
+    
+    [self updateInfiniteScrollingHandlerAndFooterView:shouldInfinitelyScroll];
+    
+    [self _loadFirstPage];
+    
+    [super viewWillAppear:animated];
     
     if (!_tableView) {
         NSLog(@"\n\n\nWARNING: please connect your UITableView with the Interface Builder to this Controller\n\n\n");
@@ -29,17 +115,6 @@
     
     [_tableView setScrollsToTop:YES];
     
-    
-    
-}
-- (void)viewWillDisappear:(BOOL)animated{
-    LLog();
-    [_tableView setScrollsToTop:NO];
-    
-    [super viewWillDisappear:animated];
-}
-- (void)viewDidDisappear:(BOOL)animated{
-    [super viewDidDisappear:animated];
 }
 
 #pragma mark - Table view data source
@@ -47,7 +122,6 @@
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
 {
     NSInteger count = [[self.fetchedResultsController sections] count];
-    DLog(@"count %ld", (long)count);
     
     return count;
 }
@@ -164,19 +238,19 @@
 - (void)reachedLastElement{
     LLog();
 }
-- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView{
-    LLog();
-    
-    if ([scrollView isEqual:self.tableView]) {
-        
-        NSLog(@"size %f", scrollView.contentSize.height);
-        
-        
-        if (scrollView.contentOffset.y+scrollView.frame.size.height > scrollView.contentSize.height-50 ) {
-            [self pagingCellFor:(UITableView *)scrollView atIndexPath:nil];
-        }
-    }
-}
+//- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView{
+//    LLog();
+//    
+//    if ([scrollView isEqual:self.tableView]) {
+//        
+//        NSLog(@"size %f", scrollView.contentSize.height);
+//        
+//        
+//        if (scrollView.contentOffset.y+scrollView.frame.size.height > scrollView.contentSize.height-50 ) {
+//            [self pagingCellFor:(UITableView *)scrollView atIndexPath:nil];
+//        }
+//    }
+//}
 
 
 
@@ -210,10 +284,10 @@
 }
 - (void)tableView:(UITableView *)tableView didEndDisplayingCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath{
 
-    [self unloadCell:cell atIndexPath:indexPath];
+    [self unloadCell:cell];
     
 }
-- (void)unloadCell:(UITableViewCell *)cell atIndexPath:(NSIndexPath *)indexPath{
+- (void)unloadCell:(UITableViewCell *)cell{
 
     
     [[NSNotificationCenter defaultCenter] removeObserver:cell];
@@ -222,7 +296,7 @@
 #pragma mark - Fetched results controller
 - (void)controllerWillChangeContent:(NSFetchedResultsController *)controller
 {
-    if ((self.navigationController == nil || [[self.navigationController visibleViewController] isEqual:self]) && self.dynamicUpdate) {
+    if ([[self.navigationController.viewControllers lastObject] isEqual:self] && self.dynamicUpdate) {
 
         [_tableView beginUpdates];
     }
@@ -231,7 +305,7 @@
 
 - (void)controller:(NSFetchedResultsController *)controller didChangeSection:(id <NSFetchedResultsSectionInfo>)sectionInfo atIndex:(NSUInteger)sectionIndex forChangeType:(NSFetchedResultsChangeType)type{
     
-    if ((self.navigationController == nil || [[self.navigationController visibleViewController] isEqual:self] ) && self.dynamicUpdate) {
+    if ([[self.navigationController.viewControllers lastObject] isEqual:self] && self.dynamicUpdate) {
         
         LLog();
         switch(type) {
@@ -253,7 +327,7 @@
 }
 
 - (void)controller:(NSFetchedResultsController *)controller didChangeObject:(id)anObject atIndexPath:(NSIndexPath *)indexPath forChangeType:(NSFetchedResultsChangeType)type newIndexPath:(NSIndexPath *)newIndexPath{
-    if (( self.navigationController == nil || [[self.navigationController visibleViewController] isEqual:self]) && self.dynamicUpdate) {
+    if ([[self.navigationController.viewControllers lastObject] isEqual:self] && self.dynamicUpdate) {
         
         LLog();
         UITableView *tableView = _tableView;
@@ -261,7 +335,7 @@
         switch(type) {
             case NSFetchedResultsChangeInsert:{
 
-                [tableView insertRowsAtIndexPaths:@[newIndexPath] withRowAnimation:UITableViewRowAnimationMiddle];
+                [tableView insertRowsAtIndexPaths:@[newIndexPath] withRowAnimation:UITableViewRowAnimationNone];
             }break;
                 
             case NSFetchedResultsChangeDelete:{
@@ -270,7 +344,7 @@
                 
                 [[NSNotificationCenter defaultCenter] removeObserver:cell];
                 
-                [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationMiddle];
+                [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
             }break;
                 
             case NSFetchedResultsChangeUpdate:{
@@ -279,16 +353,15 @@
                 
                 [[NSNotificationCenter defaultCenter] removeObserver:cell];
                 
-                
                 [self configureCell:[tableView cellForRowAtIndexPath:indexPath] atIndexPath:indexPath];
                 
                 [self startCell:[tableView cellForRowAtIndexPath:indexPath] atIndexPath:indexPath];
             }break;
                 
             case NSFetchedResultsChangeMove:{
-
-                [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationMiddle];
-                [tableView insertRowsAtIndexPaths:@[newIndexPath] withRowAnimation:UITableViewRowAnimationMiddle];
+//                [tableView moveRowAtIndexPath:indexPath toIndexPath:newIndexPath ];
+                [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
+                [tableView insertRowsAtIndexPaths:@[newIndexPath] withRowAnimation:UITableViewRowAnimationNone];
             }break;
         }
     }
@@ -296,21 +369,311 @@
 
 - (void)controllerDidChangeContent:(NSFetchedResultsController *)controller
 {
-    LLog();
-    if (self.navigationController == nil || [[self.navigationController visibleViewController] isEqual:self]) {
+    
+    if ([[self.navigationController.viewControllers lastObject] isEqual:self] && self.dynamicUpdate) {
         
-        DLog(@"dynamicUpdate: %d", _dynamicUpdate);
-        if (_dynamicUpdate) {
-            
-            [_tableView endUpdates];
-        }else{
-            LLog();
-            [_tableView reloadData];
-        }
-        
+        [_tableView endUpdates];
+    }else{
+        [_tableView reloadData];
     }
+        
+    
 }
 
 
 
+
+
+
+
+//stateful table
+- (id)initWithCoder:(NSCoder *)aDecoder{
+    self = [super initWithCoder:aDecoder];
+    
+    if ( self) {
+        _statefulState = JMStatefulTableViewControllerStateIdle;
+        self.statefulDelegate = self;
+    }
+    return self;
+}
+- (id) initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil {
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (!self) return nil;
+    
+    _statefulState = JMStatefulTableViewControllerStateIdle;
+    self.statefulDelegate = self;
+    
+    return self;
+}
+- (void) dealloc {
+    self.statefulDelegate = nil;
+}
+
+#pragma mark - Loading Methods
+
+- (void) loadNewer {
+    if([self _totalNumberOfRows] == 0) {
+        [self _loadFirstPage];
+    } else {
+        [self _loadFromPullToRefresh];
+    }
+}
+
+- (void) _loadFirstPage {
+    if(self.statefulState == JMStatefulTableViewControllerStateInitialLoading || ([self _totalNumberOfRows] > 0 && self.fetchedResultsController.fetchedObjects.count > 0)) return;
+    
+    self.statefulState = JMStatefulTableViewControllerStateInitialLoading;
+    
+    [self.tableView reloadData];
+    
+    [self.statefulDelegate statefulTableViewControllerWillBeginInitialLoading:self completionBlock:^{
+        [self.tableView reloadData]; // We have to call reloadData before we call _totalNumberOfRows otherwise the new count (after loading) won't be accurately reflected.
+        
+        if(([self _totalNumberOfRows] > 0 && self.fetchedResultsController.fetchedObjects.count > 0)) {
+            self.statefulState = JMStatefulTableViewControllerStateIdle;
+        } else {
+            self.statefulState = JMStatefulTableViewControllerStateEmpty;
+        }
+    } failure:^(NSError *error) {
+        self.statefulState = JMStatefulTableViewControllerError;
+    }];
+}
+- (void) _loadNextPage {
+    if(self.statefulState == JMStatefulTableViewControllerStateLoadingNextPage) return;
+    
+    if([self.statefulDelegate statefulTableViewControllerShouldBeginLoadingNextPage:self]) {
+        self.tableView.showsInfiniteScrolling = YES;
+        
+        self.statefulState = JMStatefulTableViewControllerStateLoadingNextPage;
+        
+        [self.statefulDelegate statefulTableViewControllerWillBeginLoadingNextPage:self completionBlock:^{
+            [self.tableView reloadData];
+            
+            if(![self.statefulDelegate statefulTableViewControllerShouldBeginLoadingNextPage:self]) {
+                self.tableView.showsInfiniteScrolling = NO;
+            };
+            
+            if(([self _totalNumberOfRows] > 0 && self.fetchedResultsController.fetchedObjects.count > 0)) {
+                self.statefulState = JMStatefulTableViewControllerStateIdle;
+            } else {
+                self.statefulState = JMStatefulTableViewControllerStateEmpty;
+            }
+        } failure:^(NSError *error) {
+            //TODO What should we do here?
+            self.statefulState = JMStatefulTableViewControllerStateIdle;
+        }];
+    } else {
+        self.tableView.showsInfiniteScrolling = NO;
+    }
+}
+
+- (void) _loadFromPullToRefresh {
+    if(self.statefulState == JMStatefulTableViewControllerStateLoadingFromPullToRefresh) return;
+    
+    self.statefulState = JMStatefulTableViewControllerStateLoadingFromPullToRefresh;
+    
+    [self.statefulDelegate statefulTableViewControllerWillBeginLoadingFromPullToRefresh:self completionBlock:^(NSArray *indexPaths) {
+        if([indexPaths count] > 0) {
+            CGFloat totalHeights = [self _cumulativeHeightForCellsAtIndexPaths:indexPaths];
+            
+            //Offset by the height of the pull to refresh view when it's expanded:
+            CGFloat offset = 0.0f;
+            
+            if([self respondsToSelector:@selector(refreshControl)]) {
+                //offset = self.refreshControl.frame.size.height;
+            } else {
+                offset = self.tableView.pullToRefreshView.frame.size.height;
+            }
+            
+            [self.tableView setContentInset:UIEdgeInsetsMake(offset, 0.0f, 0.0f, 0.0f)];
+            [self.tableView reloadData];
+            
+            if(self.tableView.contentOffset.y == 0) {
+                self.tableView.contentOffset = CGPointMake(0, (self.tableView.contentOffset.y + totalHeights) - 60.0);
+            } else {
+                self.tableView.contentOffset = CGPointMake(0, (self.tableView.contentOffset.y + totalHeights));
+            }
+        }
+        
+        self.statefulState = JMStatefulTableViewControllerStateIdle;
+        [self _pullToRefreshFinishedLoading];
+    } failure:^(NSError *error) {
+        //TODO: What should we do here?
+        
+        self.statefulState = JMStatefulTableViewControllerStateIdle;
+        [self _pullToRefreshFinishedLoading];
+    }];
+}
+
+#pragma mark - Table View Cells & NSIndexPaths
+
+- (UITableViewCell *) _cellForLoadingCell {
+    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+    
+    UIActivityIndicatorView *activityIndicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
+    activityIndicator.center = cell.center;
+    [cell addSubview:activityIndicator];
+    
+    [activityIndicator startAnimating];
+    
+    cell.tag = kLoadingCellTag;
+    
+    return cell;
+}
+- (BOOL) _indexRepresentsLastSection:(NSInteger)section {
+    NSInteger totalNumberOfSections = [self numberOfSectionsInTableView:self.tableView];
+    if(section != (totalNumberOfSections - 1)) return NO; //section is not the last section!
+    
+    return YES;
+}
+- (BOOL) _indexPathRepresentsLastRow:(NSIndexPath *)indexPath {
+    NSInteger totalNumberOfSections = [self numberOfSectionsInTableView:self.tableView];
+    if(indexPath.section != (totalNumberOfSections - 1)) return NO; //indexPath.section is not the last section!
+    
+    NSInteger totalNumberOfRowsInSection = [self tableView:self.tableView numberOfRowsInSection:indexPath.section];
+    if(indexPath.row != (totalNumberOfRowsInSection - 1)) return NO; //indexPath.row is not the last row in this section!
+    
+    return YES;
+}
+- (NSInteger) _totalNumberOfRows {
+    self.isCountingRows = YES;
+    
+    NSInteger numberOfRows = 0;
+    
+    NSInteger numberOfSections = [self numberOfSectionsInTableView:self.tableView];
+    for(NSInteger i = 0; i < numberOfSections; i++) {
+        numberOfRows += [self tableView:self.tableView numberOfRowsInSection:i];
+    }
+    
+    self.isCountingRows = NO;
+    
+    return numberOfRows;
+}
+- (CGFloat) _cumulativeHeightForCellsAtIndexPaths:(NSArray *)indexPaths {
+    if(!indexPaths) return 0.0;
+    
+    CGFloat totalHeight = 0.0;
+    
+    for(NSIndexPath *indexPath in indexPaths) {
+        totalHeight += [self tableView:self.tableView heightForRowAtIndexPath:indexPath];
+    }
+    
+    return totalHeight;
+}
+
+- (void) _pullToRefreshFinishedLoading {
+    [self.tableView.pullToRefreshView stopAnimating];
+    if([self respondsToSelector:@selector(refreshControl)]) {
+        //[self.refreshControl endRefreshing];
+    }
+}
+
+#pragma mark - Setter Overrides
+
+- (void) setStatefulState:(JMStatefulTableViewControllerState)statefulState {
+    if([self.statefulDelegate respondsToSelector:@selector(statefulTableViewController:willTransitionToState:)]) {
+        [self.statefulDelegate statefulTableViewController:self willTransitionToState:statefulState];
+    }
+    
+    _statefulState = statefulState;
+    
+    switch (_statefulState) {
+        case JMStatefulTableViewControllerStateIdle:
+            [self.tableView.infiniteScrollingView stopAnimating];
+            
+            self.tableView.backgroundView = nil;
+            self.tableView.separatorStyle = UITableViewCellSeparatorStyleSingleLine;
+            self.tableView.scrollEnabled = YES;
+            self.tableView.tableHeaderView.hidden = NO;
+            self.tableView.tableFooterView.hidden = NO;
+            [self.tableView reloadData];
+            
+            break;
+            
+        case JMStatefulTableViewControllerStateInitialLoading:
+            self.tableView.backgroundView = self.loadingView;
+            self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+            self.tableView.scrollEnabled = NO;
+            self.tableView.tableHeaderView.hidden = YES;
+            self.tableView.tableFooterView.hidden = YES;
+            [self.tableView reloadData];
+            
+            break;
+            
+        case JMStatefulTableViewControllerStateEmpty:
+            [self.tableView.infiniteScrollingView stopAnimating];
+            
+            self.tableView.backgroundView = nil;
+//            self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+            self.tableView.scrollEnabled = YES;
+            self.tableView.tableHeaderView.hidden = NO;
+            self.tableView.tableFooterView.hidden = NO;
+            [self.tableView reloadData];
+            
+        case JMStatefulTableViewControllerStateLoadingNextPage:
+            // TODO
+            break;
+            
+        case JMStatefulTableViewControllerStateLoadingFromPullToRefresh:
+            // TODO
+            break;
+            
+        case JMStatefulTableViewControllerError:
+            [self.tableView.infiniteScrollingView stopAnimating];
+            
+            self.tableView.backgroundView = self.errorView;
+            self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+            self.tableView.scrollEnabled = NO;
+            self.tableView.tableHeaderView.hidden = YES;
+            self.tableView.tableFooterView.hidden = YES;
+            [self.tableView reloadData];
+            break;
+            
+        default:
+            break;
+    }
+    
+    if([self.statefulDelegate respondsToSelector:@selector(statefulTableViewController:didTransitionToState:)]) {
+        [self.statefulDelegate statefulTableViewController:self didTransitionToState:statefulState];
+    }
+}
+
+#pragma mark - View Lifecycle
+- (void) updateInfiniteScrollingHandlerAndFooterView:(BOOL)shouldInfinitelyScroll {
+    if (shouldInfinitelyScroll) {
+        if(self.tableView.infiniteScrollingView.infiniteScrollingHandler == nil) {
+            __block __typeof(self)safeSelf = self;
+            
+            [self.tableView addInfiniteScrollingWithActionHandler:^{
+                [safeSelf _loadNextPage];
+            }];
+        }
+    } else {
+        self.tableView.infiniteScrollingView.infiniteScrollingHandler = nil;
+        self.tableView.tableFooterView = nil;
+    }
+}
+
+- (BOOL) shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
+    return (interfaceOrientation == UIInterfaceOrientationPortrait);
+}
+
+#pragma mark - JMStatefulTableViewControllerDelegate
+
+- (void) statefulTableViewControllerWillBeginInitialLoading:(JxFetchResultTableViewController *)vc completionBlock:(void (^)())success failure:(void (^)(NSError *error))failure {
+    NSAssert(NO, @"statefulTableViewControllerWillBeginInitialLoading:completionBlock:failure: is meant to be implementd by it's subclasses!");
+}
+
+- (void) statefulTableViewControllerWillBeginLoadingFromPullToRefresh:(JxFetchResultTableViewController *)vc completionBlock:(void (^)(NSArray *indexPathsToInsert))success failure:(void (^)(NSError *error))failure {
+    NSAssert(NO, @"statefulTableViewControllerWillBeginLoadingFromPullToRefresh:completionBlock:failure: is meant to be implementd by it's subclasses!");
+}
+
+- (void) statefulTableViewControllerWillBeginLoadingNextPage:(JxFetchResultTableViewController *)vc completionBlock:(void (^)())success failure:(void (^)(NSError *))failure {
+    NSAssert(NO, @"statefulTableViewControllerWillBeginLoadingNextPage:completionBlock:failure: is meant to be implementd by it's subclasses!");
+}
+- (BOOL) statefulTableViewControllerShouldBeginLoadingNextPage:(JxFetchResultTableViewController *)vc {
+    NSAssert(NO, @"statefulTableViewControllerShouldBeginLoadingNextPage is meant to be implementd by it's subclasses!");    
+    
+    return NO;
+}
 @end

@@ -32,5 +32,6 @@
 - (BOOL)replaceCurrentSQLiteDBWithNewDB:(NSURL *)pathToNewDBFile;
 
 - (NSURL *)getURIPrepresentationForID:(NSString *)idString andEntityName:(NSString *)entityName;
+- (NSString *)getStringPrepresentationForID:(NSString *)idString andEntityName:(NSString *)entityName;
 
 @end

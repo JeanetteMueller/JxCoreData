@@ -60,6 +60,7 @@
 - (NSManagedObjectContext*)newPrivateContext{
     NSManagedObjectContext* context = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
     context.persistentStoreCoordinator = self.persistentStoreCoordinator;
+    context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy;
     return context;
 }
 - (void)saveContext{
@@ -210,11 +211,14 @@
     [[NSNotificationCenter defaultCenter] addObserverForName:NSManagedObjectContextObjectsDidChangeNotification
                                                       object:nil
                                                        queue:nil
-                                                  usingBlock:^(NSNotification *notification) {
+                                                  usingBlock:^(NSNotification *note) {
                                                       
-//                                                      NSArray* insertedObjects = [[notification userInfo] objectForKey:NSInsertedObjectsKey] ;
-//                                                      NSArray* deletedObjects = [[notification userInfo] objectForKey:NSDeletedObjectsKey] ;
-//                                                      NSArray* updatedObjects = [[notification userInfo] objectForKey:NSUpdatedObjectsKey] ;
+//                                                      DLog(@"note.object: %@", note.object);
+//                                                      DLog(@"note.userInfo: %@", note.userInfo);
+                                                      
+//                                                      NSArray* insertedObjects = [[note userInfo] objectForKey:NSInsertedObjectsKey] ;
+//                                                      NSArray* deletedObjects = [[note userInfo] objectForKey:NSDeletedObjectsKey] ;
+//                                                      NSArray* updatedObjects = [[note userInfo] objectForKey:NSUpdatedObjectsKey] ;
 //                                                      DLog(@"insertObjects: %@", [insertedObjects description]);
 //                                                      DLog(@"deletedObjects: %@", [deletedObjects description]);
 //                                                      DLog(@"updatedObjects: %@", [updatedObjects description]);
@@ -243,6 +247,7 @@
     
     self.mainManagedObjectContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
     _mainManagedObjectContext.persistentStoreCoordinator = [self persistentStoreCoordinator];
+    _mainManagedObjectContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy;
     
     return _mainManagedObjectContext;
 }
@@ -302,15 +307,12 @@
             (void)[self persistentStoreCoordinator];
         });
         
-        DLog(@"return after init");
         return _persistentStoreCoordinator;
     }
     
-    DLog(@"create");
     self.persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
     
-    
-    DLog(@"Db Name \"%@\"", _name);
+//    DLog(@"Db Name \"%@\"", _name);
     NSError *error;
     
     NSURL *storeURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:[self getDBFileName]];
@@ -388,21 +390,19 @@
 
 - (NSURL *)getURIPrepresentationForID:(NSString *)idString andEntityName:(NSString *)entityName{
     
+    NSString *urlString = [self getStringPrepresentationForID:idString andEntityName:entityName];
+    
+    return [NSURL URLWithString:urlString];
+}
+- (NSString *)getStringPrepresentationForID:(NSString *)idString andEntityName:(NSString *)entityName{
+    
     NSPersistentStoreCoordinator *storeCoordinator = [self persistentStoreCoordinator];
     
     NSDictionary *metaData = [storeCoordinator metadataForPersistentStore:[[storeCoordinator persistentStores] firstObject]];
 
     //DLog(@"SQLITE UUID %@", [metaData objectForKey:NSStoreUUIDKey]);
     
-    NSString *urlString = [NSString stringWithFormat:@"x-coredata://%@/%@/%@", [metaData objectForKey:NSStoreUUIDKey], entityName, idString];
-    
-    //DLog(@"urlString: %@", urlString);
-    
-    NSURL *url = [NSURL URLWithString:urlString];
-    
-    //DLog(@"url: %@", url);
-    
-    return url;
+    return [NSString stringWithFormat:@"x-coredata://%@/%@/%@", [metaData objectForKey:NSStoreUUIDKey], entityName, idString];
 }
      
      

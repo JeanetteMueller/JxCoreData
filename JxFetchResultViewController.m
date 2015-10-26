@@ -28,7 +28,7 @@
         
     }
     
-    [self refetchData];
+    //[self refetchData];
     
 }
 - (void)viewDidAppear:(BOOL)animated{
@@ -42,7 +42,7 @@
 - (void)viewDidDisappear:(BOOL)animated{
     LLog();
     
-    _fetchedResultsController = nil;
+    //_fetchedResultsController = nil;
     
     [super viewDidDisappear:animated];
 }
@@ -87,11 +87,16 @@
 
     fetchRequest.returnsObjectsAsFaults = NO;
     [fetchRequest setFetchLimit:[self.fetchLimit intValue]];
+
+    
+    [fetchRequest setFetchBatchSize:25];
     
     NSFetchedResultsController *aFetchedResultsController = [[NSFetchedResultsController alloc] initWithFetchRequest:fetchRequest
                                                                                                 managedObjectContext:self.managedObjectContext
                                                                                                   sectionNameKeyPath:self.sectionKeyPath
                                                                                                            cacheName:nil];
+    
+    
     
 
     aFetchedResultsController.delegate = self;
