@@ -5,7 +5,7 @@
 //
 
 #import "JxFetchResultTableViewController.h"
-#import "Logging.h"
+//#import "Logging.h"
 
 @interface SVPullToRefreshView ()
 
@@ -58,7 +58,7 @@ static const int kLoadingCellTag = 257;
 }
 
 - (void)viewDidLoad{
-    _page = 1;
+    self.page = 1;
     
     [super viewDidLoad];
 }
@@ -105,9 +105,11 @@ static const int kLoadingCellTag = 257;
     
     [self updateInfiniteScrollingHandlerAndFooterView:shouldInfinitelyScroll];
     
-    [self _loadFirstPage];
+    
     
     [super viewWillAppear:animated];
+    
+    [self _loadFirstPage];
     
     if (!_tableView) {
         NSLog(@"\n\n\nWARNING: please connect your UITableView with the Interface Builder to this Controller\n\n\n");
@@ -226,7 +228,7 @@ static const int kLoadingCellTag = 257;
         
         }else{
             DLog(@"step 2");
-            _lastPageReached = YES;
+            self.lastPageReached = YES;
             
             [self reachedLastElement];
         }
@@ -391,7 +393,7 @@ static const int kLoadingCellTag = 257;
     self = [super initWithCoder:aDecoder];
     
     if ( self) {
-        _statefulState = JMStatefulTableViewControllerStateIdle;
+        self.statefulState = JMStatefulTableViewControllerStateIdle;
         self.statefulDelegate = self;
     }
     return self;
@@ -400,7 +402,7 @@ static const int kLoadingCellTag = 257;
     self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
     if (!self) return nil;
     
-    _statefulState = JMStatefulTableViewControllerStateIdle;
+    self.statefulState = JMStatefulTableViewControllerStateIdle;
     self.statefulDelegate = self;
     
     return self;
@@ -426,16 +428,19 @@ static const int kLoadingCellTag = 257;
     
     [self.tableView reloadData];
     
+    __weak __typeof(self)weakSelf = self;
+    __strong __typeof(weakSelf)strongSelf = weakSelf;
     [self.statefulDelegate statefulTableViewControllerWillBeginInitialLoading:self completionBlock:^{
-        [self.tableView reloadData]; // We have to call reloadData before we call _totalNumberOfRows otherwise the new count (after loading) won't be accurately reflected.
         
-        if(([self _totalNumberOfRows] > 0 && self.fetchedResultsController.fetchedObjects.count > 0)) {
-            self.statefulState = JMStatefulTableViewControllerStateIdle;
+        [strongSelf.tableView reloadData]; // We have to call reloadData before we call _totalNumberOfRows otherwise the new count (after loading) won't be accurately reflected.
+        
+        if(([strongSelf _totalNumberOfRows] > 0 && strongSelf.fetchedResultsController.fetchedObjects.count > 0)) {
+            strongSelf.statefulState = JMStatefulTableViewControllerStateIdle;
         } else {
-            self.statefulState = JMStatefulTableViewControllerStateEmpty;
+            strongSelf.statefulState = JMStatefulTableViewControllerStateEmpty;
         }
     } failure:^(NSError *error) {
-        self.statefulState = JMStatefulTableViewControllerError;
+        strongSelf.statefulState = JMStatefulTableViewControllerError;
     }];
 }
 - (void) _loadNextPage {

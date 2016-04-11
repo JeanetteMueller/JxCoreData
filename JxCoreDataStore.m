@@ -25,8 +25,8 @@
 - (id)initWithStoreName:(NSString *)storeName andTeamID:(NSString *)teamID{
     self = [super init];
     if (self) {
-        _name = storeName;
-        _teamID = teamID;
+        self.name = storeName;
+        self.teamID = teamID;
         [self setupNotifications];
     }
     
@@ -93,7 +93,7 @@
     [_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeURL options:nil error:&error];
     
     if (storeCoordinator != nil) {
-        _mainManagedObjectContext = nil;
+        self.mainManagedObjectContext = nil;
     }
     
 }
@@ -162,8 +162,6 @@
             if(![_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeURL options:[self getSQLiteOptions] error:&error]){
                 NSLog(@"Oops, could not add PersistentStore");
                 NSLog(@"ERROR %@, %@", error, [error userInfo]);
-                
-                //abort();
             }
             
         }else{
@@ -257,7 +255,7 @@
     }
     
     NSURL *modelURL = [[NSBundle mainBundle] URLForResource:_name withExtension:@"momd"];
-    _managedObjectModel = [[NSManagedObjectModel alloc] initWithContentsOfURL:modelURL];
+    self.managedObjectModel = [[NSManagedObjectModel alloc] initWithContentsOfURL:modelURL];
     
     
 //    NSMappingModel *mappingModel = [[NSMappingModel alloc] initWithContentsOfURL:modelURL];
@@ -287,8 +285,9 @@
 }
 - (NSDictionary *)getSQLiteOptions{
     return @{
-             NSMigratePersistentStoresAutomaticallyOption: [NSNumber numberWithBool:YES],
-             NSInferMappingModelAutomaticallyOption: [NSNumber numberWithBool:YES]
+             NSMigratePersistentStoresAutomaticallyOption: @(YES),
+             NSInferMappingModelAutomaticallyOption: @(YES)
+             
              };
     
 }
@@ -312,14 +311,11 @@
     
     self.persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
     
-//    DLog(@"Db Name \"%@\"", _name);
     NSError *error;
     
     NSURL *storeURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:[self getDBFileName]];
     
     [self copyExistingDBFileToWorkingdirectory:storeURL];
-    
-    
     
     if (![_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType
                                                    configuration:nil
@@ -328,20 +324,8 @@
                                                            error:&error]) {
         
         NSLog(@"ERROR %@, %@", error, [error userInfo]);
-        //abort();
         
         [[NSFileManager defaultManager] removeItemAtURL:storeURL error:&error];
-        
-        //
-        //        if (![_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType
-        //                                                       configuration:nil
-        //                                                                 URL:storeURL
-        //                                                             options:[self getSQLiteOptions]
-        //                                                               error:&error]) {
-        //
-        //            NSLog(@"ERROR %@, %@", error, [error userInfo]);
-        //        }
-        
     }
     
     return _persistentStoreCoordinator;

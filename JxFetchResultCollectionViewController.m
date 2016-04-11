@@ -9,13 +9,14 @@
 
 @interface JxFetchResultCollectionViewController ()
 
+@property (strong, nonatomic) NSMutableArray *objectChanges;
+@property (strong, nonatomic) NSMutableArray *sectionChanges;
 - (void)configureCell:(UICollectionViewCell *)cell atIndexPath:(NSIndexPath *)indexPath;
 
 @end
 
 @implementation JxFetchResultCollectionViewController{
-    NSMutableArray *_objectChanges;
-    NSMutableArray *_sectionChanges;
+    
     
 }
 
@@ -24,8 +25,8 @@
     [super viewDidLoad];
 	// Do any additional setup after loading the view, typically from a nib.
     
-    _objectChanges = [NSMutableArray array];
-    _sectionChanges = [NSMutableArray array];
+    self.objectChanges = [NSMutableArray array];
+    self.sectionChanges = [NSMutableArray array];
     
     
 }

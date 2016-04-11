@@ -5,7 +5,7 @@
 //
 
 #import "JxFetchResultViewController.h"
-#import "Logging.h"
+//#import "Logging.h"
 
 @interface JxFetchResultViewController ()
 
@@ -17,37 +17,22 @@
     [super viewWillAppear:animated];
     LLog();
     
-    
-
     if (self.isMovingToParentViewController == NO){
         //back buton pressed
         
     }else{
         //erster aufruf
         
-        
     }
     
-    //[self refetchData];
-    
-}
-- (void)viewDidAppear:(BOOL)animated{
-    [super viewDidAppear:animated];
-    LLog();
-}
-- (void)viewWillDisappear:(BOOL)animated{
-    LLog();
-    [super viewWillDisappear:animated];
 }
 - (void)viewDidDisappear:(BOOL)animated{
     LLog();
-    
-    //_fetchedResultsController = nil;
-    
+
     [super viewDidDisappear:animated];
 }
 - (void)dealloc{
-    _managedObjectContext = nil;
+    self.managedObjectContext = nil;
 }
 
 #pragma mark - Fetched results controller
