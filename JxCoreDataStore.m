@@ -198,7 +198,7 @@
                                                               
                                                               [moc performBlock:^(){
                                                                   [moc mergeChangesFromContextDidSaveNotification:note];
-                                                                  [[NSNotificationCenter defaultCenter] postNotificationName:kStoreDidChangeNotification object:nil];
+                                                                  [[NSNotificationCenter defaultCenter] postNotificationName:kStoreDidChangeNotification object:note.object userInfo:note.userInfo];
                                                               }];
                                                           }
                                                       }

@@ -26,25 +26,23 @@
     }
     
 }
-- (void)viewDidDisappear:(BOOL)animated{
-    LLog();
 
-    [super viewDidDisappear:animated];
-}
 - (void)dealloc{
     self.managedObjectContext = nil;
 }
 
 #pragma mark - Fetched results controller
-- (void)refetchData{
+- (BOOL)refetchData{
     LLog();
     NSError *error;
     
     @try {
         
-        if (![self.fetchedResultsController performFetch:&error]) {
+        if ([self.fetchedResultsController performFetch:&error]) {
+            return YES;
+        }else{
             NSLog(@"Error %@: %@", error, error.description);
-        };
+        }
         
         //NSLog(@"fetchedObjects %@", self.fetchedResultsController.fetchedObjects);
         
@@ -52,7 +50,7 @@
     @catch (NSException *exception) {
         NSLog(@"Exception %@: %@", exception.name, exception.reason);
     }
-    
+    return NO;
 }
 - (NSFetchedResultsController *)fetchedResultsController{
     
@@ -74,7 +72,7 @@
     [fetchRequest setFetchLimit:[self.fetchLimit intValue]];
 
     
-    [fetchRequest setFetchBatchSize:25];
+    [fetchRequest setFetchBatchSize:10];
     
     NSFetchedResultsController *aFetchedResultsController = [[NSFetchedResultsController alloc] initWithFetchRequest:fetchRequest
                                                                                                 managedObjectContext:self.managedObjectContext

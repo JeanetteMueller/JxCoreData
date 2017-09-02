@@ -19,6 +19,6 @@
 @property (strong, nonatomic) NSArray *sortDescriptors;
 @property (strong, nonatomic) NSNumber *fetchLimit;
 
-- (void)refetchData;
+- (BOOL)refetchData;
 
 @end

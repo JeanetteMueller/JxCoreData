@@ -9,6 +9,9 @@
 
 @interface JxFetchResultCollectionViewController ()
 
+@property (assign, nonatomic) BOOL shouldReloadCollectionView;
+@property (strong, nonatomic) NSBlockOperation *blockOperation;
+
 @property (strong, nonatomic) NSMutableArray *objectChanges;
 @property (strong, nonatomic) NSMutableArray *sectionChanges;
 - (void)configureCell:(UICollectionViewCell *)cell atIndexPath:(NSIndexPath *)indexPath;
@@ -54,7 +57,15 @@
 }
 
 
+- (void)viewWillLayoutSubviews
+{
+    [super viewWillLayoutSubviews];
+    [self.collectionView.collectionViewLayout invalidateLayout];
+}
+
 - (NSInteger)numberOfSectionsInCollectionView:(UICollectionView *)collectionView{
+    
+    [collectionView.collectionViewLayout invalidateLayout];
     return [[self.fetchedResultsController sections] count];
 }
 
@@ -102,7 +113,7 @@
 
 //- (void)controller:(NSFetchedResultsController *)controller didChangeSection:(id <NSFetchedResultsSectionInfo>)section InfoatIndex:(NSUInteger)sectionIndex forChangeType:(NSFetchedResultsChangeType)type{
 //    LLog();
-//    //NSMutableDictionary *change = [NSMutableDictionary new];
+//    if ([[self.navigationController.viewControllers lastObject] isEqual:self]){
 //    
 //    switch(type) {
 //        case NSFetchedResultsChangeInsert:
@@ -118,58 +129,58 @@
 //            break;
 //    }
 //    
-//    //[_sectionChanges addObject:change];
+//    }
 //}
-//
+
 //- (void)controller:(NSFetchedResultsController *)controller didChangeObject:(id)anObject atIndexPath:(NSIndexPath *)indexPath forChangeType:(NSFetchedResultsChangeType)type newIndexPath:(NSIndexPath *)newIndexPath{
 //    LLog();
-//    
-//    switch(type) {
-//            
-//        case NSFetchedResultsChangeInsert:
-////            NSLog(@"didChangeObject - insert");
-//            
-//            if (newIndexPath.section > self.collectionView.numberOfSections-1) {
-//                [self.collectionView insertSections:[NSIndexSet indexSetWithIndex:newIndexPath.section]];
-//            }
-//            
-//            [self.collectionView insertItemsAtIndexPaths:@[newIndexPath]];
-//            break;
-//            
-//        case NSFetchedResultsChangeDelete:
-//            NSLog(@"didChangeObject - delete");
-//            [self.collectionView deleteItemsAtIndexPaths:@[indexPath]];
-//            break;
-//            
-//        case NSFetchedResultsChangeUpdate:
-//            NSLog(@"didChangeObject - update");
+//    if ([[self.navigationController.viewControllers lastObject] isEqual:self]){
+//        switch(type) {
+//                
+//            case NSFetchedResultsChangeInsert:
+//                if (newIndexPath.section > self.collectionView.numberOfSections-1) {
+//                    [self.collectionView insertSections:[NSIndexSet indexSetWithIndex:newIndexPath.section]];
+//                }
+//                
+//                [self.collectionView insertItemsAtIndexPaths:@[newIndexPath]];
+//                break;
+//                
+//            case NSFetchedResultsChangeDelete:
+//                NSLog(@"didChangeObject - delete");
+//                [self.collectionView deleteItemsAtIndexPaths:@[indexPath]];
+//                break;
+//                
+//            case NSFetchedResultsChangeUpdate:
+//                NSLog(@"didChangeObject - update");
 //
-//            [_collectionView reloadItemsAtIndexPaths:@[indexPath]];
-//            break;
-//            
-//        case NSFetchedResultsChangeMove:
-//            NSLog(@"didChangeObject - move");
-//            
-//            if (indexPath.section == newIndexPath.section) {
+//                [_collectionView reloadItemsAtIndexPaths:@[indexPath]];
+//                break;
+//                
+//            case NSFetchedResultsChangeMove:
+//                NSLog(@"didChangeObject - move");
+//                
 //                [_collectionView moveItemAtIndexPath:indexPath toIndexPath:newIndexPath];
-//                [_collectionView reloadItemsAtIndexPaths:@[newIndexPath]];
-//            }else{
-//                [self.collectionView reloadData];
-//            }
-//            break;
+//                
+////            if (indexPath.section == newIndexPath.section) {
+////                [_collectionView moveItemAtIndexPath:indexPath toIndexPath:newIndexPath];
+////                [_collectionView reloadItemsAtIndexPaths:@[newIndexPath]];
+////            }else{
+////                [self.collectionView reloadData];
+////            }
+//                break;
+//        }
 //    }
-//
 //}
-- (void)controllerWillChangeContent:(NSFetchedResultsController *)controller{
-    LLog();
-    
-    //bei weiterne problemen könnte das helfen
-    //[NSFetchedResultsController deleteCacheWithName:controller.cacheName];
-}
-- (void)controllerDidChangeContent:(NSFetchedResultsController *)controller{
-    LLog();
-    [self.collectionView reloadData];
-}
+//- (void)controllerWillChangeContent:(NSFetchedResultsController *)controller{
+//    LLog();
+//    
+//    //bei weiterne problemen könnte das helfen
+//    //[NSFetchedResultsController deleteCacheWithName:controller.cacheName];
+//}
+//- (void)controllerDidChangeContent:(NSFetchedResultsController *)controller{
+//    LLog();
+//    //[self.collectionView reloadData];
+//}
 
 - (BOOL)shouldReloadCollectionViewToPreventKnownIssue {
     LLog();
@@ -212,5 +223,125 @@
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation{
     LLog();
     [_collectionView performBatchUpdates:nil completion:nil];
+}
+
+
+
+
+
+
+
+
+
+- (void)controllerWillChangeContent:(NSFetchedResultsController *)controller
+{
+//#warning provisorisch auf YES gesetzt da update nicht richtig klappen wollte
+    self.shouldReloadCollectionView = NO;
+    self.blockOperation = [[NSBlockOperation alloc] init];
+}
+
+- (void)controller:(NSFetchedResultsController *)controller didChangeSection:(id<NSFetchedResultsSectionInfo>)sectionInfo
+           atIndex:(NSUInteger)sectionIndex forChangeType:(NSFetchedResultsChangeType)type
+{
+    __weak UICollectionView *collectionView = self.collectionView;
+    switch (type) {
+        case NSFetchedResultsChangeInsert: {
+            [self.blockOperation addExecutionBlock:^{
+                [collectionView insertSections:[NSIndexSet indexSetWithIndex:sectionIndex]];
+            }];
+            break;
+        }
+            
+        case NSFetchedResultsChangeDelete: {
+            [self.blockOperation addExecutionBlock:^{
+                [collectionView deleteSections:[NSIndexSet indexSetWithIndex:sectionIndex]];
+            }];
+            break;
+        }
+            
+        case NSFetchedResultsChangeUpdate: {
+            [self.blockOperation addExecutionBlock:^{
+                [collectionView reloadSections:[NSIndexSet indexSetWithIndex:sectionIndex]];
+            }];
+            break;
+        }
+            
+        default:
+            break;
+    }
+}
+
+- (void)controller:(NSFetchedResultsController *)controller didChangeObject:(id)anObject atIndexPath:(NSIndexPath *)indexPath forChangeType:(NSFetchedResultsChangeType)type newIndexPath:(NSIndexPath *)newIndexPath
+{
+    __weak UICollectionView *collectionView = self.collectionView;
+    switch (type) {
+        case NSFetchedResultsChangeInsert: {
+            if ([self.collectionView numberOfSections] > indexPath.section && [self.collectionView numberOfSections] > newIndexPath.section) {
+                if ([self.collectionView numberOfItemsInSection:indexPath.section] == 0) {
+                    self.shouldReloadCollectionView = YES;
+                } else {
+                    [self.blockOperation addExecutionBlock:^{
+                        [collectionView insertItemsAtIndexPaths:@[newIndexPath]];
+                    }];
+                }
+            } else {
+                self.shouldReloadCollectionView = YES;
+            }
+            break;
+        }
+            
+        case NSFetchedResultsChangeDelete: {
+            if ([self.collectionView numberOfItemsInSection:indexPath.section] == 1) {
+                self.shouldReloadCollectionView = YES;
+            } else {
+                [self.blockOperation addExecutionBlock:^{
+                    [collectionView deleteItemsAtIndexPaths:@[indexPath]];
+                }];
+            }
+            break;
+        }
+            
+        case NSFetchedResultsChangeUpdate: {
+            
+//                [collectionView reloadItemsAtIndexPaths:@[indexPath]];
+                if ([self.collectionView numberOfSections] > newIndexPath.section) {
+                    if ([self.collectionView numberOfItemsInSection:newIndexPath.section] == 0) {
+                        self.shouldReloadCollectionView = YES;
+                    } else {
+                        [self.blockOperation addExecutionBlock:^{
+                            [collectionView deleteItemsAtIndexPaths:@[indexPath]];
+                            [collectionView insertItemsAtIndexPaths:@[newIndexPath]];
+                        }];
+                    }
+                }else {
+                    self.shouldReloadCollectionView = YES;
+                }
+               
+            
+            break;
+        }
+            
+        case NSFetchedResultsChangeMove: {
+            [self.blockOperation addExecutionBlock:^{
+                [collectionView moveItemAtIndexPath:indexPath toIndexPath:newIndexPath];
+            }];
+            break;
+        }
+            
+        default:
+            break;
+    }
+}
+
+- (void)controllerDidChangeContent:(NSFetchedResultsController *)controller
+{
+    // Checks if we should reload the collection view to fix a bug @ http://openradar.appspot.com/12954582
+    if (self.shouldReloadCollectionView) {
+        [self.collectionView reloadData];
+    } else {
+        [self.collectionView performBatchUpdates:^{
+            [self.blockOperation start];
+        } completion:nil];
+    }
 }
 @end

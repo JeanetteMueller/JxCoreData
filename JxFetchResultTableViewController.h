@@ -51,6 +51,7 @@ typedef enum {
 @property (nonatomic, readwrite) int page;
 @property (nonatomic, readwrite) BOOL lastPageReached;
 @property (nonatomic, readwrite) BOOL dynamicUpdate;
+@property (strong, nonatomic) NSString *cellIdentifier;
 
 - (void)configureCell:(UITableViewCell *)cell atIndexPath:(NSIndexPath *)indexPath;
 - (void)startCell:(UITableViewCell *)cell atIndexPath:(NSIndexPath *)indexPath;

@@ -59,7 +59,7 @@ static const int kLoadingCellTag = 257;
 
 - (void)viewDidLoad{
     self.page = 1;
-    
+    self.cellIdentifier = @"Cell";
     [super viewDidLoad];
 }
 
@@ -75,7 +75,6 @@ static const int kLoadingCellTag = 257;
     self.loadingView = nil;
     self.errorView = nil;
 }
-
 - (void) viewWillAppear:(BOOL)animated {
     
     __block __typeof(self)safeSelf = self;
@@ -109,16 +108,21 @@ static const int kLoadingCellTag = 257;
     
     [super viewWillAppear:animated];
     
-    [self _loadFirstPage];
+   
     
     if (!_tableView) {
         NSLog(@"\n\n\nWARNING: please connect your UITableView with the Interface Builder to this Controller\n\n\n");
     }
     
-    [_tableView setScrollsToTop:YES];
+    [self _loadFirstPage];
     
+    [_tableView setScrollsToTop:YES];
 }
-
+- (void) viewDidAppear:(BOOL)animated{
+    [super viewDidAppear:animated];
+    
+//    [self _loadFirstPage];
+}
 #pragma mark - Table view data source
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
@@ -140,14 +144,14 @@ static const int kLoadingCellTag = 257;
         count = [sectionInfo numberOfObjects];
     }
     
-    DLog(@"count %ld", (long)count);
+//    DLog(@"count %ld", (long)count);
     return count;
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    LLog();
-    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"Cell" forIndexPath:indexPath];
+    DLog(@"cellIdentifier: %@", _cellIdentifier);
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:self.cellIdentifier forIndexPath:indexPath];
     
     [self configureCell:cell atIndexPath:indexPath];
     
@@ -227,7 +231,6 @@ static const int kLoadingCellTag = 257;
             
         
         }else{
-            DLog(@"step 2");
             self.lastPageReached = YES;
             
             [self reachedLastElement];
@@ -257,7 +260,11 @@ static const int kLoadingCellTag = 257;
 
 
 #pragma mark - Table view delegate
-
+//- (void)tableView:(UITableView *)tableView willDisplayHeaderView:(UIView *)view forSection:(NSInteger)section{
+//    if ([view respondsToSelector:@selector(update)]) {
+//        [view performSelector:@selector(update)];
+//    }
+//}
 
 - (NSString *)tableView:(UITableView *)tableView titleForDeleteConfirmationButtonForRowAtIndexPath:(NSIndexPath *)indexPath{
     return @"Actions";
@@ -302,7 +309,6 @@ static const int kLoadingCellTag = 257;
 
         [_tableView beginUpdates];
     }
-
 }
 
 - (void)controller:(NSFetchedResultsController *)controller didChangeSection:(id <NSFetchedResultsSectionInfo>)sectionInfo atIndex:(NSUInteger)sectionIndex forChangeType:(NSFetchedResultsChangeType)type{
@@ -316,8 +322,6 @@ static const int kLoadingCellTag = 257;
                 break;
                 
             case NSFetchedResultsChangeDelete:
-                
-                
                 
                 [_tableView deleteSections:[NSIndexSet indexSetWithIndex:sectionIndex] withRowAnimation:UITableViewRowAnimationMiddle];
                 break;
@@ -338,6 +342,14 @@ static const int kLoadingCellTag = 257;
             case NSFetchedResultsChangeInsert:{
 
                 [tableView insertRowsAtIndexPaths:@[newIndexPath] withRowAnimation:UITableViewRowAnimationNone];
+                
+                UIView *headerView = [tableView headerViewForSection:newIndexPath.section];
+                if ([headerView respondsToSelector:@selector(update)]) {
+                    [headerView performSelector:@selector(update)];
+                }
+                
+                [headerView setNeedsDisplay];
+                [headerView setNeedsLayout];
             }break;
                 
             case NSFetchedResultsChangeDelete:{
@@ -347,6 +359,15 @@ static const int kLoadingCellTag = 257;
                 [[NSNotificationCenter defaultCenter] removeObserver:cell];
                 
                 [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
+                
+                UIView *headerView = [tableView headerViewForSection:indexPath.section];
+                
+                if ([headerView respondsToSelector:@selector(update)]) {
+                    [headerView performSelector:@selector(update)];
+                }
+                
+                [headerView setNeedsDisplay];
+                [headerView setNeedsLayout];
             }break;
                 
             case NSFetchedResultsChangeUpdate:{
@@ -355,9 +376,17 @@ static const int kLoadingCellTag = 257;
                 
                 [[NSNotificationCenter defaultCenter] removeObserver:cell];
                 
-                [self configureCell:[tableView cellForRowAtIndexPath:indexPath] atIndexPath:indexPath];
+                [self configureCell:cell atIndexPath:indexPath];
                 
-                [self startCell:[tableView cellForRowAtIndexPath:indexPath] atIndexPath:indexPath];
+                [self startCell:cell atIndexPath:indexPath];
+                
+                UIView *headerView = [tableView headerViewForSection:indexPath.section];
+                if ([headerView respondsToSelector:@selector(update)]) {
+                    [headerView performSelector:@selector(update)];
+                }
+                
+                [headerView setNeedsDisplay];
+                [headerView setNeedsLayout];
             }break;
                 
             case NSFetchedResultsChangeMove:{
